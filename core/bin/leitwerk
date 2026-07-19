@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+#
+# leitwerk — the tool-agnostic gate.
+#
+# This is the one deterministic artifact the framework depends on. It is a plain
+# executable: no agent runtime is required to run it. CI runs it as the
+# authoritative gate; Claude Code runs it via a Stop hook and the Bash tool;
+# open-code agents run it from AGENTS.md instructions. All three invoke the SAME
+# binary, so the strongest guarantee never depends on a particular agent.
+#
+# Subcommands:
+#   verify [--tier T0|T1|T2]   Run the checks selected for a blast-radius tier.
+#   tier <path>                Print the blast-radius tier for a changed path.
+#   drift                      Surface spec<->code divergence (does not resolve it).
+#   init [dir]                 Scaffold leitwerk/ (constitution, tiers) into a repo.
+#   version
+#
+# Exit codes: 0 = gate green, 1 = a check failed (gate red), 2 = usage error.
+
+set -euo pipefail
+
+LEITWERK_VERSION="0.1.0"
+
+# Resolve the install root (this file lives in <root>/bin/leitwerk).
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Built-in checks ship with the install; a repo overrides per-check by dropping
+# its own <name>.sh into leitwerk/checks/ (a consuming repo must never edit the
+# installed core). Repo-local wins; anything not overridden falls back to built-in.
+CHECKS_DIR="$SELF/checks"
+LOCAL_CHECKS="${LEITWERK_CHECKS:-leitwerk/checks}"
+TIERS_FILE="${LEITWERK_TIERS:-leitwerk/tiers.conf}"
+[ -f "$TIERS_FILE" ] || TIERS_FILE="$SELF/leitwerk.tiers"
+
+c_red=$'\033[31m'; c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_off=$'\033[0m'
+
+die() { echo "leitwerk: $*" >&2; exit 2; }
+
+# Read the space-separated check list for a tier from the tiers file.
+checks_for_tier() {
+  local tier="$1"
+  awk -v t="$tier" '
+    /^\[tiers\]/ {sec="tiers"; next}
+    /^\[/        {sec=""; next}
+    sec=="tiers" && $1==t {sub(/^[^=]*=[ ]*/,""); print; exit}
+  ' "$TIERS_FILE"
+}
+
+# Map a path to a tier using the [paths] glob table (first match wins).
+tier_for_path() {
+  local path="$1"
+  awk -v p="$path" '
+    /^\[paths\]/ {sec="paths"; next}
+    /^\[/        {sec=""; next}
+    sec=="paths" && /=/ {
+      glob=$1; sub(/[ ]*=.*/,"",glob)
+      tier=$0; sub(/^[^=]*=[ ]*/,"",tier)
+      # translate a glob to an anchored regex, via sentinels so the single-star
+      # pass does not re-mangle the regex the double-star pass just produced.
+      gsub(/\./,"\\.",glob)
+      gsub(/\*\*\//,"DBLSLASH",glob)   # **/  -> optional leading segments
+      gsub(/\*\*/,"DBLSTAR",glob)      # **   -> anything
+      gsub(/\*/,"[^/]*",glob)          # *    -> one path segment
+      gsub(/DBLSLASH/,"(.*/)?",glob)
+      gsub(/DBLSTAR/,".*",glob)
+      if (glob=="[^/]*") glob=".*"     # bare * is the catch-all
+      if (p ~ "^" glob "$") { print tier; exit }
+    }
+  ' "$TIERS_FILE"
+}
+
+run_verify() {
+  local tier="T1"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --tier) tier="${2:?--tier needs a value}"; shift 2 ;;
+      --tier=*) tier="${1#*=}"; shift ;;
+      *) die "unknown verify option: $1" ;;
+    esac
+  done
+
+  local list; list="$(checks_for_tier "$tier")"
+  [ -n "$list" ] || die "no checks defined for tier '$tier' in $TIERS_FILE"
+
+  echo "leitwerk verify ${c_dim}(tier $tier)${c_off}"
+  echo "${c_dim}checks: $list${c_off}"
+  echo
+
+  local failed=0 name script status
+  for name in $list; do
+    if [ -x "$LOCAL_CHECKS/$name.sh" ]; then
+      script="$LOCAL_CHECKS/$name.sh"
+    elif [ -x "$CHECKS_DIR/$name.sh" ]; then
+      script="$CHECKS_DIR/$name.sh"
+    else
+      printf '  %s?%s  %-10s no such check (looked in %s, %s)\n' "$c_yel" "$c_off" "$name" "$LOCAL_CHECKS" "$CHECKS_DIR"
+      failed=1; continue
+    fi
+    set +e
+    out="$("$script" 2>&1)"; status=$?
+    set -e
+    case $status in
+      0) printf '  %s✓%s  %-10s %s\n' "$c_grn" "$c_off" "$name" "${out##*$'\n'}" ;;
+      2) printf '  %s–%s  %-10s %s\n' "$c_dim" "$c_off" "$name" "${out##*$'\n'} ${c_dim}(skipped)${c_off}" ;;
+      *) printf '  %s✗%s  %-10s %s\n' "$c_red" "$c_off" "$name" "${out##*$'\n'}"; failed=1 ;;
+    esac
+  done
+
+  echo
+  if [ "$failed" -eq 0 ]; then
+    echo "${c_grn}gate: PASS${c_off}"; return 0
+  else
+    echo "${c_red}gate: FAIL${c_off} — the change may not land until this is green."; return 1
+  fi
+}
+
+case "${1:-}" in
+  verify) shift; run_verify "$@" ;;
+  tier)   shift; [ $# -ge 1 ] || die "usage: leitwerk tier <path>"
+          t="$(tier_for_path "$1")"; echo "${t:-T1}" ;;
+  drift)  shift; exec "$CHECKS_DIR/drift.sh" ;;
+  init)   shift; dir="${1:-.}"; mkdir -p "$dir/leitwerk"
+          cp "$SELF/templates/constitution.md" "$dir/leitwerk/constitution.md"
+          cp "$SELF/leitwerk.tiers" "$dir/leitwerk/tiers.conf"
+          echo "scaffolded $dir/leitwerk/ (constitution.md, tiers.conf)" ;;
+  version|--version|-v) echo "leitwerk $LEITWERK_VERSION" ;;
+  ""|help|--help|-h)
+    sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
+  *) die "unknown command: $1 (try 'leitwerk help')" ;;
+esac

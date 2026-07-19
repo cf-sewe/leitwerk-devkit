@@ -1,0 +1,36 @@
+# The authoritative gate for open-code adoption. Copy to .github/workflows/ and
+# mark "leitwerk gate" a required status check on the protected branch. This is
+# what makes the guarantee independent of any agent runtime.
+name: leitwerk gate
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  gate:
+    name: leitwerk gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tier selection needs the diff base
+
+      - name: Install leitwerk
+        run: npm install -g @cf-sewe/leitwerk
+
+      - name: Select tier from changed paths
+        id: tier
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          highest=T0
+          rank() { case "$1" in T0) echo 0;; T1) echo 1;; T2) echo 2;; esac; }
+          for f in $(git diff --name-only "$base"...HEAD); do
+            t=$(leitwerk tier "$f")
+            [ "$(rank "$t")" -gt "$(rank "$highest")" ] && highest="$t"
+          done
+          echo "tier=$highest" >> "$GITHUB_OUTPUT"
+          echo "Highest blast-radius tier in this change: $highest"
+
+      - name: Run the gate
+        run: leitwerk verify --tier "${{ steps.tier.outputs.tier }}"

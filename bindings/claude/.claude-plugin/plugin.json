@@ -1,0 +1,8 @@
+{
+  "name": "leitwerk",
+  "description": "Spec-anchored, verification-gated workflow for AI-native development: phase skills, specialist roles, and a Stop-hook gate.",
+  "version": "0.1.0",
+  "author": { "name": "cf-sewe" },
+  "homepage": "https://github.com/cf-sewe/leitwerk-devkit",
+  "license": "MIT"
+}

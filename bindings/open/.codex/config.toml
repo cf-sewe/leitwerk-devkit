@@ -1,0 +1,12 @@
+# Codex configuration for a Leitwerk-governed repo.
+# Docs: https://developers.openai.com/codex/config-reference
+
+# AGENTS.md is the primary instruction file. Keep these fallbacks so the same
+# repo works if a team standardized on a different filename.
+project_doc_fallback_filenames = ["CLAUDE.md", "leitwerk/constitution.md"]
+
+# The constitution + specs can be large; raise the instruction budget from the
+# 32 KiB default so they are not truncated when concatenated.
+project_doc_max_bytes = 65536
+
+# Custom specialist agents live in .codex/agents/*.toml (one file per agent).

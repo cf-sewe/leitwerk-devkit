@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "leitwerk verify --tier ${LEITWERK_TIER:-T1} || exit 2",
+            "statusMessage": "Running the leitwerk gate before ending the turn...",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}

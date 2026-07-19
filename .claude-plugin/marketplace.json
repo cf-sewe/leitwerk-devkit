@@ -1,0 +1,12 @@
+{
+  "name": "leitwerk",
+  "owner": { "name": "cf-sewe" },
+  "description": "Leitwerk — spec-anchored, verification-gated framework for AI-native development.",
+  "plugins": [
+    {
+      "name": "leitwerk",
+      "source": "./bindings/claude",
+      "description": "Phase skills, specialist roles, and the verify Stop-hook gate for Claude Code."
+    }
+  ]
+}

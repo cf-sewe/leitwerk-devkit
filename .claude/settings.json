@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/core/bin/leitwerk\" verify --tier ${LEITWERK_TIER:-T2} || exit 2",
+            "statusMessage": "Running the leitwerk gate on the repo itself...",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leitwerk — A Framework for AI-Native Application Development</title>
+<meta name="description" content="A spec-anchored, gate-centric, role-based framework for building and maintaining software with AI agents across greenfield, feature, and bugfix workflows.">
+<style>
+  :root {
+    --bg: #fbfbf9; --panel: #ffffff; --panel-2: #f6f5f0; --ink: #1a1a1a; --ink-soft: #4a4a4a;
+    --ink-faint: #6d6d6d; --rule: #e2e0da; --rule-strong: #cfccc3; --accent: #0b6b5b;
+    --accent-soft: #e6f2ef; --warn: #8a5a00; --warn-soft: #fbf1dc; --code-bg: #f4f3ee;
+    --tier0: #3f78b0; --tier1: #b07a26; --tier2: #b0402a; --on-accent: #ffffff; --on-accent-soft: rgba(255,255,255,.85);
+    --maxw: 830px;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181a; --panel: #1d2023; --panel-2: #23272b; --ink: #e7e6e2; --ink-soft: #bcbbb5;
+      --ink-faint: #8f8e88; --rule: #2c3033; --rule-strong: #3a3f43; --accent: #4bbfa8;
+      --accent-soft: #12312b; --warn: #e0b25a; --warn-soft: #322a17; --code-bg: #22262a;
+      --tier0: #6ea3d8; --tier1: #d69a4c; --tier2: #db6a52; --on-accent: #0f211d; --on-accent-soft: rgba(15,33,29,.82);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16181a; --panel: #1d2023; --panel-2: #23272b; --ink: #e7e6e2; --ink-soft: #bcbbb5;
+    --ink-faint: #8f8e88; --rule: #2c3033; --rule-strong: #3a3f43; --accent: #4bbfa8;
+    --accent-soft: #12312b; --warn: #e0b25a; --warn-soft: #322a17; --code-bg: #22262a;
+    --tier0: #6ea3d8; --tier1: #d69a4c; --tier2: #db6a52; --on-accent: #0f211d; --on-accent-soft: rgba(15,33,29,.82);
+  }
+  :root[data-theme="light"] {
+    --bg: #fbfbf9; --panel: #ffffff; --panel-2: #f6f5f0; --ink: #1a1a1a; --ink-soft: #4a4a4a;
+    --ink-faint: #6d6d6d; --rule: #e2e0da; --rule-strong: #cfccc3; --accent: #0b6b5b;
+    --accent-soft: #e6f2ef; --warn: #8a5a00; --warn-soft: #fbf1dc; --code-bg: #f4f3ee;
+    --tier0: #3f78b0; --tier1: #b07a26; --tier2: #b0402a; --on-accent: #ffffff; --on-accent-soft: rgba(255,255,255,.85);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--serif); font-size: 18px; line-height: 1.65; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px 120px; }
+  header.paper { max-width: var(--maxw); margin: 0 auto; padding: 60px 24px 30px; border-bottom: 2px solid var(--rule-strong); }
+  .eyebrow { font-family: var(--sans); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin: 0 0 14px; }
+  h1 { font-size: 2.2rem; line-height: 1.12; margin: 0 0 12px; letter-spacing: -.015em; }
+  .subtitle { font-size: 1.2rem; color: var(--ink-soft); margin: 0 0 22px; font-style: italic; }
+  .byline { font-family: var(--sans); font-size: 13.5px; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 6px 18px; border-top: 1px solid var(--rule); padding-top: 16px; }
+  .byline b { color: var(--ink-soft); font-weight: 600; }
+  h2 { font-family: var(--sans); font-size: 1.52rem; letter-spacing: -.01em; margin: 3.2em 0 .1em; padding-top: .5em; scroll-margin-top: 20px; }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: .5em; }
+  h3 { font-family: var(--sans); font-size: 1.14rem; margin: 2em 0 .2em; color: var(--ink); }
+  h4 { font-family: var(--sans); font-size: .95rem; margin: 1.5em 0 .2em; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+  p { margin: .9em 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover { border-bottom-color: var(--accent); }
+  strong { font-weight: 700; }
+  code { font-family: var(--mono); font-size: .84em; background: var(--code-bg); padding: .1em .38em; border-radius: 4px; }
+  sup.cite { font-family: var(--sans); font-size: .7em; font-weight: 700; line-height: 0; }
+  sup.cite a { color: var(--accent); border: 0; }
+
+  .lead { font-size: 1.12rem; color: var(--ink-soft); }
+  .abstract { background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 6px; padding: 20px 24px; margin: 32px 0 8px; font-size: .98rem; }
+  .abstract h4 { margin-top: 0; }
+  .namebox { background: var(--panel-2); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 26px 0; font-family: var(--sans); font-size: 14px; color: var(--ink-soft); }
+  .namebox b { color: var(--accent); }
+
+  nav.toc { font-family: var(--sans); font-size: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 22px; margin: 36px 0; }
+  nav.toc h4 { margin: 0 0 10px; }
+  nav.toc ol { margin: 0; padding-left: 1.4em; columns: 2; column-gap: 32px; }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+  nav.toc li { margin: 5px 0; break-inside: avoid; }
+  nav.toc a { color: var(--ink-soft); border: 0; }
+  nav.toc a:hover { color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; font-family: var(--sans); font-size: 14px; margin: 1.4em 0; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { border-bottom: 2px solid var(--rule-strong); color: var(--ink); font-weight: 700; }
+  tbody tr:hover { background: var(--accent-soft); }
+  td code { font-size: .82em; }
+
+  figure.fig { margin: 2em 0 1.2em; }
+  figure.fig svg { display: block; width: 100%; height: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; }
+  figcaption { font-family: var(--sans); font-size: 13px; color: var(--ink-faint); text-align: center; margin-top: 10px; }
+  /* shared SVG styling — theme-aware via CSS variables */
+  .fig text { font-family: var(--sans); fill: var(--ink); }
+  .fig .layer { fill: var(--panel-2); stroke: var(--rule-strong); stroke-width: 1.5; }
+  .fig .edge { fill: var(--accent); }
+  .fig .gate { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .fig .node { fill: var(--panel-2); stroke: var(--rule-strong); stroke-width: 1.5; }
+  .fig .opus { fill: var(--accent); stroke: none; }
+  .fig text.opus-t { fill: var(--on-accent); font-weight: 600; }
+  .fig text.on-accent-sub { fill: var(--on-accent-soft); }
+  .fig .small { fill: var(--panel); stroke: var(--rule-strong); stroke-width: 1.3; }
+  .fig .title-t { font-weight: 700; font-size: 15px; fill: var(--ink); }
+  .fig .lbl { font-size: 12.5px; fill: var(--ink); }
+  .fig .lbl-c { font-size: 12.5px; fill: var(--ink); text-anchor: middle; }
+  .fig .sub-t { font-size: 11px; fill: var(--ink-faint); }
+  .fig .sub-c { font-size: 11px; fill: var(--ink-faint); text-anchor: middle; }
+  .fig .body-t { font-size: 12px; fill: var(--ink-soft); }
+  .fig .grp { font-size: 11px; font-weight: 700; letter-spacing: .06em; fill: var(--ink-faint); text-transform: uppercase; }
+  .fig .arw { stroke: var(--ink-faint); stroke-width: 1.6; fill: none; }
+  .fig .arw-a { stroke: var(--accent); stroke-width: 1.8; fill: none; }
+  .fig .ahf { fill: var(--ink-faint); }
+  .fig .aha { fill: var(--accent); }
+  .fig .t0s { stroke: var(--tier0); } .fig .t0f { fill: var(--tier0); }
+  .fig .t1s { stroke: var(--tier1); } .fig .t1f { fill: var(--tier1); }
+  .fig .t2s { stroke: var(--tier2); } .fig .t2f { fill: var(--tier2); }
+  .fig .tab-t { fill: var(--on-accent); font-weight: 700; font-size: 12px; }
+
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 20px; margin: 14px 0; }
+  .card .tag { font-family: var(--sans); font-weight: 700; font-size: 13px; color: var(--accent); letter-spacing: .03em; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+  .grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 640px) { .grid, .grid.three { grid-template-columns: 1fr; } }
+  .grid .card { margin: 0; }
+
+  .note { font-family: var(--sans); font-size: 14px; background: var(--warn-soft); border: 1px solid var(--rule); border-left: 3px solid var(--warn); color: var(--ink-soft); border-radius: 6px; padding: 12px 16px; margin: 1.2em 0; }
+  .note b { color: var(--warn); }
+  .evidence { font-family: var(--sans); font-size: 13.5px; color: var(--ink-faint); border-left: 2px solid var(--rule-strong); padding: 2px 0 2px 14px; margin: 1em 0; }
+
+  .pill { font-family: var(--sans); font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+  .t0 { color: var(--tier0); border: 1px solid var(--tier0); }
+  .t1 { color: var(--tier1); border: 1px solid var(--tier1); }
+  .t2 { color: var(--tier2); border: 1px solid var(--tier2); }
+  .m-big { color: var(--accent); border: 1px solid var(--accent); }
+  .m-small { color: var(--ink-faint); border: 1px solid var(--rule-strong); }
+
+  ol.refs { font-family: var(--sans); font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; padding-left: 2.2em; }
+  ol.refs li { margin: 9px 0; scroll-margin-top: 20px; }
+  ol.refs a { word-break: break-word; }
+  ol.refs .ref-meta { display: block; margin-top: 3px; color: var(--ink-faint); font-size: 12px; font-style: italic; }
+  ol.refs .qtag { display: inline-block; font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--rule-strong); color: var(--ink-faint); margin-right: 7px; vertical-align: 1px; }
+  ol.refs .qtag.peer { color: var(--accent); border-color: var(--accent); }
+  ol.refs .qtag.vendor { color: var(--warn); border-color: var(--warn); }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 1.2em 0; }
+  .steps > li { position: relative; padding: 4px 0 16px 46px; margin: 0; border-left: 2px solid var(--rule); margin-left: 15px; }
+  .steps > li:last-child { border-left-color: transparent; }
+  .steps > li::before { counter-increment: step; content: counter(step); position: absolute; left: -15px; top: 0; width: 28px; height: 28px; background: var(--accent); color: #fff; border-radius: 50%; font-family: var(--sans); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .steps > li b { font-family: var(--sans); font-size: 14.5px; }
+  .steps .who { font-family: var(--sans); font-size: 12px; color: var(--ink-faint); }
+
+  .theme-toggle { position: fixed; top: 14px; right: 14px; z-index: 50; font-family: var(--sans); font-size: 12px; font-weight: 600; background: var(--panel); color: var(--ink-soft); border: 1px solid var(--rule-strong); border-radius: 20px; padding: 6px 13px; cursor: pointer; }
+
+  /* scroll progress bar + section rail */
+  #progressbar { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: var(--accent); z-index: 60; transition: width .08s linear; }
+  .spy { position: fixed; right: 16px; top: 50%; transform: translateY(-50%) translateX(10px); z-index: 55; display: flex; flex-direction: column; gap: 1px; padding: 12px 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--rule); box-shadow: 0 8px 30px rgba(0,0,0,.14); opacity: 0; pointer-events: none; transition: opacity .35s ease, transform .35s ease; font-family: var(--sans); }
+  .spy.visible { opacity: 1; pointer-events: auto; transform: translateY(-50%) translateX(0); }
+  .spy-item { display: flex; align-items: center; justify-content: flex-end; gap: 10px; text-decoration: none; border: 0; padding: 3px 5px; border-radius: 8px; color: var(--ink-faint); }
+  .spy-item:hover { background: var(--accent-soft); }
+  .spy-num { font-size: 10px; font-variant-numeric: tabular-nums; color: var(--ink-faint); min-width: 15px; text-align: right; }
+  .spy-label { font-size: 12px; white-space: nowrap; max-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; text-align: right; color: var(--ink-soft); transition: max-width .35s ease, opacity .3s ease; }
+  .spy.visible .spy-label { max-width: 240px; opacity: 1; }
+  .spy-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rule-strong); flex: 0 0 auto; transition: transform .25s ease, background .25s ease, box-shadow .25s ease; }
+  .spy-item.active { color: var(--accent); }
+  .spy-item.active .spy-num { color: var(--accent); font-weight: 700; }
+  .spy-item.active .spy-label { color: var(--accent); font-weight: 700; }
+  .spy-item.active .spy-dot { background: var(--accent); transform: scale(1.3); box-shadow: 0 0 0 4px var(--accent-soft); }
+  @media (max-width: 1200px) { .spy { display: none; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .spy, .spy-label, .spy-dot, #progressbar { transition: none; } }
+  .footer { font-family: var(--sans); font-size: 13px; color: var(--ink-faint); margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--rule); }
+
+  @media print {
+    .theme-toggle { display: none; }
+    body { font-size: 11pt; background: #fff; color: #000; }
+    h2 { page-break-after: avoid; }
+    .card, figure.fig, table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="tt" aria-label="Toggle light or dark theme">◑ Theme</button>
+<div id="progressbar" aria-hidden="true"></div>
+<nav id="scrollspy" class="spy" aria-label="Document sections"></nav>
+
+<header class="paper">
+  <p class="eyebrow">Technical Whitepaper · AI-Native Software Engineering</p>
+  <h1>Leitwerk: A Framework for AI-Native Application Development</h1>
+  <p class="subtitle">Spec-anchored, gate-centric, role-based delivery for software built and maintained primarily by AI agents — across greenfield, feature, and bugfix work.</p>
+  <div class="byline">
+    <span><b>Version</b> Draft 0.1</span>
+    <span><b>Date</b> 2026-07-19</span>
+    <span><b>Scope</b> Tool-agnostic core · Claude Code &amp; open-agent bindings</span>
+    <span><b>Design assumption</b> Opus-4.8-class agentic capability</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="abstract">
+  <h4>Abstract</h4>
+  <p>AI coding agents at current capability (Opus-4.8-class and above) can generate and modify code faster than humans can read it, but the empirical record is unambiguous: without structure, quality erodes. Roughly 45% of AI-generated code fails security tests<sup class="cite"><a href="#r-veracode">12</a></sup>, iterative self-refinement <em>increases</em> critical vulnerabilities<sup class="cite"><a href="#r-secdeg">13</a></sup>, code duplication rises while refactoring falls<sup class="cite"><a href="#r-gitclear">14</a></sup>, and developers systematically over-estimate their own speed-up<sup class="cite"><a href="#r-metr">21</a></sup>. The evidence also shows what works: treat the model as a cheap, fallible generator and place correctness decisions in an external gate the agent cannot weaken<sup class="cite"><a href="#r-clover">7</a></sup><sup class="cite"><a href="#r-agentless">6</a></sup>; retrieve context rather than pre-loading it<sup class="cite"><a href="#r-contextrot">17</a></sup>; and keep humans on the decisions agents demonstrably get wrong.</p>
+  <p><strong>Leitwerk</strong> operationalizes these findings. It rests on three layers — durable git-versioned artifacts, an ensemble of specialized agent <em>roles</em>, and a deterministic verification gate — organized so that humans own only requirements and behavioral review while everything between is machine-enforced and tiered by blast radius. This document defines the problem, the principles, the roles and how they are invoked, capability-tiered model routing, three concrete workflows (greenfield, feature, bugfix), the gate, the human-in-the-loop model, and adoption bindings for Claude Code and open agent tooling. Leitwerk is spec-anchored rather than regenerate-only, so a human expert may still write code by hand; divergence between specification and code is surfaced for a human to reconcile rather than silently overwritten.</p>
+</div>
+
+<div class="namebox">
+  <b>On the name.</b> <em>Leitwerk</em> (German) is an aircraft's tail assembly — the control surfaces that keep a fast, powerful machine stable and on course. The framework is the leitwerk around a powerful model: the model provides thrust; the framework provides control and direction.
+</div>
+
+<nav class="toc">
+  <h4>Contents</h4>
+  <ol>
+    <li><a href="#intro">Introduction &amp; motivation</a></li>
+    <li><a href="#background">Background &amp; evidence</a></li>
+    <li><a href="#principles">Design principles</a></li>
+    <li><a href="#architecture">Architecture: three layers</a></li>
+    <li><a href="#roles">Roles &amp; the agent ensemble</a></li>
+    <li><a href="#routing">Capability-tiered model routing</a></li>
+    <li><a href="#invocation">How roles are invoked</a></li>
+    <li><a href="#workflows">Workflows: greenfield, feature, bugfix</a></li>
+    <li><a href="#gate">Verification &amp; the gate</a></li>
+    <li><a href="#hitl">Human-in-the-loop</a></li>
+    <li><a href="#adoption">Adoption: Claude Code &amp; open agents</a></li>
+    <li><a href="#evaluation">Evaluation plan</a></li>
+    <li><a href="#limitations">Limitations &amp; open questions</a></li>
+    <li><a href="#references">References</a></li>
+  </ol>
+</nav>
+
+<h2 id="intro"><span class="num">1</span>Introduction &amp; motivation</h2>
+<p class="lead">Leitwerk's goal is a rigorous, scalable process for software that is written mostly by AI and reviewed — never hand-read line-by-line — by humans. Humans contribute requirements and judge results; agents do the construction.</p>
+
+<h3>1.1 The opportunity, and why structure is required</h3>
+<p>A capable agent can now implement a feature end-to-end, and cheaper models can perform routine work — locating code, summarizing logs — at negligible cost. The temptation is to point an agent at a task and let it run. The evidence says this fails predictably at scale: security defects are common and get <em>worse</em> under iteration<sup class="cite"><a href="#r-secdeg">13</a></sup>, duplication accumulates while refactoring declines<sup class="cite"><a href="#r-gitclear">14</a></sup>, and long-running agents lose track of their own goals as context degrades<sup class="cite"><a href="#r-contextrot">17</a></sup>. The value of a framework is precisely to convert raw model capability into <em>sustained</em> quality.</p>
+
+<h3>1.2 The problem to solve</h3>
+<div class="grid">
+  <div class="card"><span class="tag">The one-shot ceiling</span><p>Applications of real size cannot be produced in a single pass. Naive iteration compounds errors rather than converging — an agent's own past mistakes condition its future ones.<sup class="cite"><a href="#r-selfcond">18</a></sup></p></div>
+  <div class="card"><span class="tag">Requirement drift</span><p>Even when specified up front, requirements are hard to keep current and harder to keep enforced. Code and intent silently diverge until the system no longer does what was asked.</p></div>
+  <div class="card"><span class="tag">Quality erosion</span><p>Left ungated, AI-authored codebases trend toward duplication, shallow tests, and undetected vulnerabilities — and the decline accelerates as the codebase grows.<sup class="cite"><a href="#r-gitclear">14</a></sup></p></div>
+  <div class="card"><span class="tag">Context limits</span><p>No context window is large enough to hold a real system reliably; models degrade well before the limit, so understanding must be retrieved, not memorized.<sup class="cite"><a href="#r-contextrot">17</a></sup></p></div>
+</div>
+
+<h3>1.3 The three use cases</h3>
+<p>Leitwerk treats three practical situations as first-class; each is a concrete workflow in Section 8.</p>
+<div class="grid three">
+  <div class="card"><span class="tag">A · Greenfield</span><p>A new, complex application built from nothing — too large to one-shot, must grow over many sessions without losing coherence.</p></div>
+  <div class="card"><span class="tag">B · Feature on existing</span><p>A new capability added to an existing, possibly legacy codebase the agent did not create and does not fully understand.</p></div>
+  <div class="card"><span class="tag">C · Bugfix</span><p>A defect in existing software — localize, reproduce, fix, and prove no regression, at the lightest rigor the change's blast radius allows.</p></div>
+</div>
+
+<h3>1.4 Goal, non-goals, and the design assumption</h3>
+<p><strong>Goal:</strong> flat-or-improving quality as an AI-authored codebase grows, with humans limited to requirements and behavioral review. <strong>Non-goals:</strong> Leitwerk is not a new IDE or model; it is not tied to any stack; and it does not require full regenerate-only development, so a human expert may write code by hand.</p>
+<p><strong>Design assumption.</strong> Leitwerk assumes agents of Opus-4.8-class capability for reasoning-heavy work — architecture, ambiguous specification, adversarial verification — and uses smaller, faster models for routine work such as locating code and summarizing (Section 6). The framework is not a model; it is the scaffolding that makes a capable model reliable and a cheap model useful.</p>
+
+<h2 id="background"><span class="num">2</span>Background &amp; evidence</h2>
+<p>Leitwerk's choices are not stylistic. Each traces to a measured result in the literature (2023–2026). The findings cluster into five themes.</p>
+<div class="note"><b>How to read this evidence.</b> Two kinds of claim appear below. <em>Model-capability snapshots</em> — failure rates, context-length thresholds, benchmark scores — are tied to the model generation tested; several were measured on GPT-4-class or early-2025 models and <strong>will drift as models improve, so they are dated in §14 and should be re-checked, not read as current</strong>. <em>Structural, methodological, and human-factors findings</em> — verification-before-acceptance, spec enforcement, characterization tests, automation bias — are largely model-independent and durable. Critically, the snapshots do not prop up the framework: because Leitwerk is defensive, better models lower the <em>frequency</em> of these failures without removing the <em>asymmetric cost</em> of the rare one, so the gates remain cheap insurance whichever way the numbers move.</div>
+
+<h3>2.1 Verification is the bottleneck, not generation</h3>
+<p>The strongest systems constrain control flow and gate acceptance on an external oracle. <em>Agentless</em> — a fixed localize→repair→validate pipeline with no autonomous tool-choosing — topped the open-source SWE-bench Lite leaderboard as of mid-2024 at a fraction of the cost<sup class="cite"><a href="#r-agentless">6</a></sup>. <em>Clover</em> reduced correctness to a consistency check among code, docs, and formal annotations and, with GPT-4 on the Dafny <em>CloverBench</em>, accepted correct programs at high rate with <strong>zero false positives</strong> on incorrect ones<sup class="cite"><a href="#r-clover">7</a></sup>. <em>AlphaCodium</em>'s designed test-generate-run-fix flow more than doubled the pass rate of GPT-4 in early 2024<sup class="cite"><a href="#r-alphacodium">8</a></sup>. The specific models and rankings have since moved on; the durable lesson — <em>a designed pipeline with an external check beats open-ended self-direction</em> — is what Leitwerk builds on, and it has only strengthened as agents have grown more capable and more prone to confident error.</p>
+
+<h3>2.2 Quality erodes without gates</h3>
+<div class="evidence">
+  Across 100+ models tested in 2025, ~45% of AI-generated samples failed security tests, with no improvement as models scaled<sup class="cite"><a href="#r-veracode">12</a></sup>. · Critical vulnerabilities rose <strong>+37.6% after five refinement iterations</strong> on 2025-era models<sup class="cite"><a href="#r-secdeg">13</a></sup>. · Duplicated blocks rose ~8→12% while refactoring fell from 25% to under 10% of changed lines, across 211M lines committed 2020–2024<sup class="cite"><a href="#r-gitclear">14</a></sup>. · ~1 in 5 packages an LLM suggested did not exist ("slopsquatting"), across 16 models in 2025<sup class="cite"><a href="#r-slop">15</a></sup>.
+</div>
+<p>These are 2025-era snapshots and the exact rates will fall as models improve — but that does not weaken the argument, because none of the gates that follow depend on a particular number: an external security check, a dependency allowlist, and duplication budgets stay cheap whether the failure rate is 45% or 5%, and they pay for themselves the first time they catch the rare high-cost defect. The load-bearing conclusion is structural, not numerical: <strong>self-review is not a gate</strong> — a reviewer that shares the author's blind spots, or <em>is</em> the author, cannot be the thing that certifies the work — so the durable guardrails are the ones the generating agent cannot author or weaken for itself.</p>
+
+<h3>2.3 Long-horizon degradation is intrinsic</h3>
+<p>Long context is not free accuracy. On the frontier models tested in mid-2025, one analysis found retrieval degrading well before the window filled — around 50K tokens even in a 1M-token window<sup class="cite"><a href="#r-contextrot">17</a></sup> — echoing the U-shaped position bias documented on 2023-era models<sup class="cite"><a href="#r-lostmiddle">16</a></sup>. <strong>That specific threshold is model-generation-bound and should not be read literally for Opus-4.8-class models, which handle long context far better;</strong> it is cited as motivation, not as a fixed limit. The durable point does not expire: an agent's own errors can compound over a long session<sup class="cite"><a href="#r-selfcond">18</a></sup>, so the robust design keeps state in external, structured memory with cold-start recovery as the default<sup class="cite"><a href="#r-harness">19</a></sup> and retrieves over a structural repo map rather than stuffing context<sup class="cite"><a href="#r-repomap">9</a></sup> — which stays cheaper, faster, and lower-distraction no matter how large or reliable context windows become.</p>
+
+<h3>2.4 Specifications must be enforced, not merely written</h3>
+<p>Spec-driven development has a maturity ladder — <em>spec-first</em>, <em>spec-anchored</em>, <em>spec-as-source</em><sup class="cite"><a href="#r-sdd">1</a></sup>. Production practice lands on <strong>spec-anchored</strong>: specs and code co-evolve, bound by executable checks. Even Amazon found tests alone insufficient to capture intent and re-added prose specs — but as context, not enforcement<sup class="cite"><a href="#r-vogels">3</a></sup>. Documentation and specs rot; the countermeasure is provenance labeling and anchoring so drift fails CI rather than misleading silently<sup class="cite"><a href="#r-reversa">11</a></sup><sup class="cite"><a href="#r-codified">10</a></sup>.</p>
+
+<h3>2.5 Human review is valuable but fragile at scale</h3>
+<p>Humans reliably catch intent, edge cases, and missing context, but AI code "looks clean even when wrong," and automation bias raises the rate of following bad advice by ~26%<sup class="cite"><a href="#r-autobias">22</a></sup> — a human-factors effect independent of model generation. A controlled study on early-2025 tools even found experienced developers <strong>19% slower</strong> with AI while believing they were ~20% faster; the authors later revised the study's design (Feb 2026), so the magnitude is contested and tool-bound — but the <em>perception gap</em> it exposed is the durable, design-relevant finding<sup class="cite"><a href="#r-metr">21</a></sup>. The scalable response is well-established: Meta's RADAR uses a risk-tiered funnel that auto-lands low-risk diffs and concentrates human attention on high-risk ones, auto-approving ~60% while keeping revert and incident rates a fraction of manual review<sup class="cite"><a href="#r-radar">23</a></sup>. And for existing code, two model-independent practices hold regardless of capability: pin behavior with characterization tests before change<sup class="cite"><a href="#r-feathers">24</a></sup>, and wrap generation in build+test validation loops, as large-scale migrations do<sup class="cite"><a href="#r-google">25</a></sup>.</p>
+
+<h2 id="principles"><span class="num">3</span>Design principles</h2>
+<p>Nine principles follow directly from Section 2. They are the non-negotiable core; everything else is implementation.</p>
+<div class="grid">
+  <div class="card"><span class="tag">P1 · Cheap generation, strict acceptance</span><p>The model generates freely; correctness is decided by an external gate it cannot weaken.<sup class="cite"><a href="#r-clover">7</a></sup></p></div>
+  <div class="card"><span class="tag">P2 · Enforce with executables, not prose</span><p>Requirements are kept honest by tests, contracts, and CI checks. Prose is context.<sup class="cite"><a href="#r-vogels">3</a></sup></p></div>
+  <div class="card"><span class="tag">P3 · Pin behavior before changing it</span><p>Code the framework did not generate under gate gets characterization tests first.<sup class="cite"><a href="#r-feathers">24</a></sup></p></div>
+  <div class="card"><span class="tag">P4 · Retrieve, don't preload</span><p>A structural repo map is always available; the context window stays small and high-signal.<sup class="cite"><a href="#r-contextrot">17</a></sup></p></div>
+  <div class="card"><span class="tag">P5 · Cold-start recovery is default</span><p>Durable artifacts on disk carry all critical state; no session is irreplaceable.<sup class="cite"><a href="#r-harness">19</a></sup></p></div>
+  <div class="card"><span class="tag">P6 · Tier rigor by blast radius</span><p>Read-only code is checked lightly; irreversible code demands safety proofs and sign-off.</p></div>
+  <div class="card"><span class="tag">P7 · Review behavior, surface drift</span><p>Humans judge specs, tests, and rendered results; spec↔code divergence is escalated, not auto-resolved.<sup class="cite"><a href="#r-metr">21</a></sup></p></div>
+  <div class="card"><span class="tag">P8 · Budget against erosion</span><p>Duplication, complexity, and churn have hard ceilings; scheduled consolidation runs.<sup class="cite"><a href="#r-gitclear">14</a></sup></p></div>
+  <div class="card"><span class="tag">P9 · Humans own architecture</span><p>Agents do local/mechanical change well and system-wide reasoning poorly; keep humans on decomposition and seams.<sup class="cite"><a href="#r-refactor">26</a></sup></p></div>
+</div>
+
+<h2 id="architecture"><span class="num">4</span>Architecture: three layers</h2>
+<p>The central move is to separate what the agent <em>drives</em> from what it <em>cannot skip or edit</em>. Three layers realize this (Figure 1). Authority flows down: artifacts define intent, roles produce work, and the gate decides what may be committed. A feedback edge lets work update the artifacts — but only after passing the gate.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 720 452" role="img" aria-label="Diagram of the three layers: durable artifacts, roles, and the gate.">
+  <defs>
+    <marker id="ah1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahf"/></marker>
+    <marker id="aha1" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="aha"/></marker>
+  </defs>
+  <!-- Layer 1 -->
+  <rect class="layer" x="44" y="28" width="600" height="104" rx="9"/>
+  <rect class="edge" x="44" y="28" width="7" height="104" rx="3"/>
+  <text class="title-t" x="70" y="58">Layer 1 — Durable artifacts</text>
+  <text class="sub-t" x="70" y="78">git-versioned · re-read every session</text>
+  <text class="body-t" x="70" y="102">constitution · living specs · decision log (ADRs)</text>
+  <text class="body-t" x="70" y="120">progress / feature list · blast-radius map · repo map</text>
+  <!-- Layer 2 -->
+  <rect class="layer" x="44" y="176" width="600" height="104" rx="9"/>
+  <rect class="edge" x="44" y="176" width="7" height="104" rx="3"/>
+  <text class="title-t" x="70" y="206">Layer 2 — Roles</text>
+  <text class="sub-t" x="70" y="226">specialized agents · scoped context · capability-tiered</text>
+  <text class="body-t" x="70" y="250">Orchestrator · Architect · Spec Steward · Scout · Implementer</text>
+  <text class="body-t" x="70" y="268">verification panel: correctness · security · performance · UX · tests</text>
+  <!-- Layer 3 -->
+  <rect class="gate" x="44" y="324" width="600" height="104" rx="9"/>
+  <rect class="edge" x="44" y="324" width="7" height="104" rx="3"/>
+  <text class="title-t" x="70" y="354">Layer 3 — Gate · <tspan font-family="ui-monospace, Menlo, monospace" font-size="13">leitwerk verify</tspan></text>
+  <text class="sub-t" x="70" y="374">deterministic · the agent cannot edit it</text>
+  <text class="body-t" x="70" y="398">tiered Definition-of-Done · drift sensor · erosion budgets</text>
+  <text class="body-t" x="70" y="416">runs in CI · optional stop / pre-commit hook</text>
+  <!-- down arrows -->
+  <path class="arw" d="M344,132 L344,174" marker-end="url(#ah1)"/>
+  <text class="sub-t" x="356" y="158">read each session</text>
+  <path class="arw" d="M344,280 L344,322" marker-end="url(#ah1)"/>
+  <text class="sub-t" x="356" y="306">every change must pass</text>
+  <!-- feedback edge -->
+  <path class="arw-a" d="M644,376 C688,376 690,80 646,80" marker-end="url(#aha1)"/>
+  <text class="sub-t" transform="translate(704,300) rotate(-90)">artifacts updated only under gate</text>
+</svg>
+<figcaption>Figure 1. The three layers. Authority flows down; the gate constrains what the roles may commit; artifacts change only through the gate.</figcaption>
+</figure>
+
+<p><strong>Layer 1 — Durable artifacts.</strong> The source of truth, versioned with the code. The <em>constitution</em> (small, human-owned) states architectural principles, the blast-radius tier definitions, mandatory gates, and hard boundaries. <em>Living specs</em> hold behavior as Given/When/Then, each fragment anchored to the code and tests that satisfy it. The <em>decision log</em> (ADRs) records the <em>why</em> so later sessions do not re-litigate settled choices<sup class="cite"><a href="#r-adr">20</a></sup>. The <em>progress / feature list</em> starts every planned feature marked "failing" to prevent premature completion<sup class="cite"><a href="#r-harness">19</a></sup>. The <em>repo map</em> is a tree-sitter + PageRank symbol map<sup class="cite"><a href="#r-repomap">9</a></sup>, extended to a typed code graph for large repositories.</p>
+<p><strong>Layer 2 — Roles.</strong> Specialized agents, each with scoped context and an assigned model tier (Sections 5–6).</p>
+<p><strong>Layer 3 — Gate.</strong> A single deterministic command, <code>leitwerk verify</code>, composed of tier-selected checks (Section 9). It is the operational form of P1–P2 and is the one thing no role can talk its way past.</p>
+
+<p>Roles operate a single repeating loop — <em>spec → plan → build → verify → review</em> — shown in Figure 2. The gate is a hard stop: a failing gate returns work to the builder; a passing gate reaches human review. Feedback from review, or a hand-edit by an expert, flows back to the specification rather than being applied blindly.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 760 250" role="img" aria-label="The core loop: spec, plan, build, gate, review, with feedback to spec and a fail loop to build.">
+  <defs>
+    <marker id="ah2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahf"/></marker>
+    <marker id="aha2" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="aha"/></marker>
+  </defs>
+  <!-- fail loop (behind nodes) -->
+  <path class="arw" d="M520,86 C505,44 415,44 400,86" marker-end="url(#ah2)"/>
+  <text class="sub-c" x="460" y="38">✗ fail → fix</text>
+  <!-- nodes -->
+  <g>
+    <rect class="node" x="24" y="88" width="118" height="56" rx="9"/>
+    <text class="lbl-c" x="83" y="112" font-weight="700">Spec</text>
+    <text class="sub-c" x="83" y="130">living spec</text>
+  </g>
+  <path class="arw" d="M142,116 L168,116" marker-end="url(#ah2)"/>
+  <g>
+    <rect class="node" x="170" y="88" width="118" height="56" rx="9"/>
+    <text class="lbl-c" x="229" y="112" font-weight="700">Plan</text>
+    <text class="sub-c" x="229" y="130">tier each task</text>
+  </g>
+  <path class="arw" d="M288,116 L314,116" marker-end="url(#ah2)"/>
+  <g>
+    <rect class="node" x="316" y="88" width="118" height="56" rx="9"/>
+    <text class="lbl-c" x="375" y="112" font-weight="700">Build</text>
+    <text class="sub-c" x="375" y="130">implement task</text>
+  </g>
+  <path class="arw" d="M434,116 L460,116" marker-end="url(#ah2)"/>
+  <g>
+    <rect class="gate" x="462" y="88" width="126" height="56" rx="9"/>
+    <text class="lbl-c" x="525" y="110" font-weight="700" font-family="ui-monospace, Menlo, monospace" font-size="12.5">leitwerk verify</text>
+    <text class="sub-c" x="525" y="130">tiered gate + drift</text>
+  </g>
+  <path class="arw-a" d="M588,116 L614,116" marker-end="url(#aha2)"/>
+  <g>
+    <rect class="node" x="616" y="88" width="120" height="56" rx="9"/>
+    <text class="lbl-c" x="676" y="112" font-weight="700">Review</text>
+    <text class="sub-c" x="676" y="130">human · behavior</text>
+  </g>
+  <!-- feedback loop -->
+  <path class="arw-a" d="M676,144 C676,210 83,210 83,146" marker-end="url(#aha2)"/>
+  <text class="sub-c" x="380" y="204">human feedback / expert edit → spec update (drift surfaced, not auto-resolved)</text>
+</svg>
+<figcaption>Figure 2. The core loop. The gate is a hard stop; refinement is bidirectional — results feed back into the specification.</figcaption>
+</figure>
+
+<h2 id="roles"><span class="num">5</span>Roles &amp; the agent ensemble</h2>
+<p>Monolithic autonomy is both costlier and less reliable than a decomposed ensemble with scoped context<sup class="cite"><a href="#r-masai">5</a></sup><sup class="cite"><a href="#r-agentless">6</a></sup>. Leitwerk defines eleven roles across five bands (Figure 3). Verification roles are deliberately <em>independent</em> of the roles that produced the work — same-model reviewers share blind spots, so review adds value only when it is adversarial and separately prompted<sup class="cite"><a href="#r-cloudflare">4</a></sup>.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 760 436" role="img" aria-label="Role ensemble: an orchestrator over four bands of roles, colored by model tier.">
+  <defs>
+    <marker id="ah3" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahf"/></marker>
+  </defs>
+  <!-- orchestrator -->
+  <rect class="opus" x="292" y="24" width="176" height="52" rx="9"/>
+  <text class="lbl-c opus-t" x="380" y="48" font-size="14">Lead Orchestrator</text>
+  <text class="sub-c on-accent-sub" x="380" y="66">plan · delegate · Opus 4.8+</text>
+  <!-- bus -->
+  <path class="arw" d="M380,76 L380,100"/>
+  <line class="arw" x1="128" y1="100" x2="632" y2="100"/>
+  <path class="arw" d="M128,100 L128,132" marker-end="url(#ah3)"/>
+  <path class="arw" d="M300,100 L300,132" marker-end="url(#ah3)"/>
+  <path class="arw" d="M470,100 L470,132" marker-end="url(#ah3)"/>
+  <path class="arw" d="M632,100 L632,132" marker-end="url(#ah3)"/>
+  <!-- group: Design -->
+  <text class="grp" x="52" y="146">Design</text>
+  <rect class="opus" x="52" y="156" width="150" height="30" rx="7"/><text class="lbl-c opus-t" x="127" y="176">Architect</text>
+  <rect class="opus" x="52" y="192" width="150" height="30" rx="7"/><text class="lbl-c opus-t" x="127" y="212">Spec Steward</text>
+  <!-- group: Discovery -->
+  <text class="grp" x="224" y="146">Discovery</text>
+  <rect class="small" x="224" y="156" width="150" height="30" rx="7"/><text class="lbl-c" x="299" y="176">Scout / Locator</text>
+  <rect class="small" x="224" y="192" width="150" height="30" rx="7"/><text class="lbl-c" x="299" y="212">Summarizer</text>
+  <!-- group: Construction -->
+  <text class="grp" x="396" y="146">Construction</text>
+  <rect class="opus" x="396" y="156" width="150" height="30" rx="7"/><text class="lbl-c opus-t" x="471" y="176">Implementer</text>
+  <text class="sub-t" x="396" y="208">Opus — logic</text>
+  <text class="sub-t" x="396" y="224">small — mechanical</text>
+  <!-- group: Verification panel -->
+  <text class="grp" x="568" y="146">Verification panel</text>
+  <rect class="opus" x="568" y="156" width="164" height="30" rx="7"/><text class="lbl-c opus-t" x="650" y="176">Correctness</text>
+  <rect class="opus" x="568" y="192" width="164" height="30" rx="7"/><text class="lbl-c opus-t" x="650" y="212">Security</text>
+  <rect class="opus" x="568" y="228" width="164" height="30" rx="7"/><text class="lbl-c opus-t" x="650" y="248">Performance</text>
+  <rect class="opus" x="568" y="264" width="164" height="30" rx="7"/><text class="lbl-c opus-t" x="650" y="284">UX / Visual</text>
+  <rect class="small" x="568" y="300" width="164" height="30" rx="7"/><text class="lbl-c" x="650" y="320">Test Engineer</text>
+  <!-- legend -->
+  <rect class="opus" x="52" y="392" width="26" height="16" rx="4"/>
+  <text class="lbl" x="86" y="405">Opus 4.8+ — judgment</text>
+  <rect class="small" x="300" y="392" width="26" height="16" rx="4"/>
+  <text class="lbl" x="334" y="405">small / fast — routine work</text>
+</svg>
+<figcaption>Figure 3. The role ensemble. The Orchestrator delegates to four bands; fill colour marks the default model tier. The verification panel is independent of the roles that produced the work.</figcaption>
+</figure>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Band</th><th>Role</th><th>Responsibility</th><th>Default model</th></tr></thead>
+  <tbody>
+    <tr><td>Orchestration</td><td><strong>Lead Orchestrator</strong></td><td>Owns the plan, decomposition, delegation, global consistency, and the human interface. The only role holding the whole picture.</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td rowspan="2">Design</td><td><strong>Architect</strong></td><td>System and seam design, ADRs, blast-radius tier assignment, migration strategy. Human-collaborative.</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td><strong>Spec Steward</strong></td><td>Maintains living specs, keeps spec↔code anchors current, performs drift reconciliation and provenance labeling.</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td rowspan="2">Discovery</td><td><strong>Scout / Locator</strong></td><td>Finds files, maps dependencies, answers "where is X" over the repo map. High volume, low reasoning.</td><td><span class="pill m-small">small / fast</span></td></tr>
+    <tr><td><strong>Summarizer</strong></td><td>Condenses logs, diffs, docs, and sub-agent reports into high-signal briefs.</td><td><span class="pill m-small">small / fast</span></td></tr>
+    <tr><td>Construction</td><td><strong>Implementer</strong></td><td>Writes code for one scoped task against its spec, or wraps and validates human-written code. Runs the local gate loop.</td><td><span class="pill m-big">Opus</span> logic · <span class="pill m-small">small</span> mechanical</td></tr>
+    <tr><td rowspan="4">Verification<br>(adversarial,<br>independent)</td><td><strong>Correctness Reviewer</strong></td><td>Hunts logic errors, missed edge cases, and spec violations. Prompted to refute, not approve.</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td><strong>Security Specialist</strong></td><td>OWASP classes, authz/authn, injection, secrets, supply chain. Woken by security-relevant diffs.</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td><strong>Performance Specialist</strong></td><td>Hot paths, N+1s, allocation, complexity budgets. Woken by hot-path or data-access diffs.</td><td><span class="pill m-small">Sonnet</span> / <span class="pill m-big">Opus</span></td></tr>
+    <tr><td><strong>UX / Visual Reviewer</strong></td><td>Reviews rendered output and accessibility from screenshots (multimodal); prepares the visual-diff package for humans.</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td>Verification</td><td><strong>Test Engineer</strong></td><td>Writes property, contract, and characterization tests; owns the golden suite; executes <code>leitwerk verify</code>.</td><td><span class="pill m-small">Sonnet</span> / <span class="pill m-big">Opus</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p>The verification band is a <em>panel</em>, not a single reviewer — an instantiation of the pattern where distinct specialists each review in their own session with their own prompt and tools<sup class="cite"><a href="#r-cloudflare">4</a></sup>. Which panel members wake is decided by blast-radius tier and diff signals (Section 7), so a read-only display change does not pay for a security and performance review it does not need.</p>
+
+<h2 id="routing"><span class="num">6</span>Capability-tiered model routing</h2>
+<p>Cost and reliability both improve when model capability is matched to task difficulty rather than applied uniformly. The <em>architect/editor</em> split — a strong model plans, a cheaper model applies edits — reached state-of-the-art at lower cost<sup class="cite"><a href="#r-repomap">9</a></sup>, and multi-agent systems find that token spend explains most of the variance in outcome<sup class="cite"><a href="#r-multiagent">19</a></sup>, so spend must be directed deliberately.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Task class</th><th>Examples</th><th>Model tier</th></tr></thead>
+  <tbody>
+    <tr><td>Architecture &amp; ambiguity</td><td>system design, seam-finding, spec formalization, tier assignment, conflict resolution</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td>Adversarial verification</td><td>correctness &amp; security review, drift adjudication, "is this really done?"</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td>Complex construction</td><td>non-trivial business logic, cross-file coordinated edits</td><td><span class="pill m-big">Opus 4.8+</span></td></tr>
+    <tr><td>Structured construction</td><td>boilerplate, mechanical refactors, format-driven edits, test scaffolding</td><td><span class="pill m-small">Sonnet-class</span></td></tr>
+    <tr><td>Retrieval &amp; summarization</td><td>locate code, gather references, condense logs / diffs, first-pass triage</td><td><span class="pill m-small">Haiku-class</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p>Routing is a property of the role (its default tier) and may be overridden per task by the Orchestrator when a "structured" task turns out to carry hidden reasoning. The principle: <strong>reserve the expensive model for judgment; buy breadth cheaply.</strong></p>
+
+<h2 id="invocation"><span class="num">7</span>How roles are invoked</h2>
+<p>Roles are triggered three ways, in priority order.</p>
+<h4>Phase-driven</h4>
+<p>The Orchestrator invokes roles per workflow stage: Architect during design, Implementer during construction, the verification panel at the gate. This is the default backbone of every workflow in Section 8.</p>
+<h4>Signal-driven (the trigger table)</h4>
+<p>Observable properties of a change wake the right specialists automatically, so rigor tracks risk without manual routing — a mechanism adapted from "codified context" trigger tables<sup class="cite"><a href="#r-codified">10</a></sup>.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Signal in the diff / task</th><th>Wakes</th><th>Min tier</th></tr></thead>
+  <tbody>
+    <tr><td>touches auth, secrets, permissions, external input</td><td>Security Specialist</td><td><span class="pill t2">T2</span></td></tr>
+    <tr><td>schema change, data migration, deletes</td><td>Architect + Security + Test Engineer</td><td><span class="pill t2">T2</span></td></tr>
+    <tr><td>hot path, loops over collections, new queries</td><td>Performance Specialist</td><td><span class="pill t1">T1</span></td></tr>
+    <tr><td>UI component, template, styling, rendered page</td><td>UX / Visual Reviewer</td><td><span class="pill t0">T0</span></td></tr>
+    <tr><td>new dependency added</td><td>Security Specialist (supply-chain check)</td><td><span class="pill t1">T1</span></td></tr>
+    <tr><td>business logic / state write</td><td>Correctness Reviewer + Test Engineer</td><td><span class="pill t1">T1</span></td></tr>
+  </tbody>
+</table>
+</div>
+<h4>Human-summoned</h4>
+<p>A human can invoke any role directly ("have the security specialist look at this") at any point — the escape hatch that keeps humans in control without reading code.</p>
+
+<h2 id="workflows"><span class="num">8</span>Workflows: greenfield, feature, bugfix</h2>
+<p>The three use cases share the core loop — <em>spec → plan → build → verify → review</em> — but enter it differently and weight the bands differently (Figure 4). Greenfield leads with architecture; a feature on existing code must first <em>onboard</em> and pin behavior; a bugfix optimizes for the lightest safe path.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 760 330" role="img" aria-label="The three use cases converging into one shared core loop, gate, and review.">
+  <defs>
+    <marker id="ah4" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahf"/></marker>
+    <marker id="aha4" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="aha"/></marker>
+  </defs>
+  <!-- lane labels -->
+  <text class="grp" x="16" y="52">A · Greenfield</text>
+  <text class="grp" x="16" y="162">B · Feature</text>
+  <text class="grp" x="16" y="272">C · Bugfix</text>
+  <!-- Lane A -->
+  <g>
+    <rect class="node" x="16" y="60" width="120" height="40" rx="8"/><text class="lbl-c" x="76" y="85">Constitution</text>
+    <path class="arw" d="M136,80 L156,80" marker-end="url(#ah4)"/>
+    <rect class="node" x="158" y="60" width="120" height="40" rx="8"/><text class="lbl-c" x="218" y="85">Decompose</text>
+    <path class="arw" d="M278,80 C420,80 430,150 508,150" marker-end="url(#ah4)"/>
+  </g>
+  <!-- Lane B -->
+  <g>
+    <rect class="node" x="16" y="150" width="104" height="40" rx="8"/><text class="lbl-c" x="68" y="175">Index</text>
+    <path class="arw" d="M120,170 L136,170" marker-end="url(#ah4)"/>
+    <rect class="node" x="138" y="150" width="118" height="40" rx="8"/><text class="lbl-c" x="197" y="170">Extract specs</text><text class="sub-c" x="197" y="184">provenance</text>
+    <path class="arw" d="M256,170 L272,170" marker-end="url(#ah4)"/>
+    <rect class="node" x="274" y="150" width="104" height="40" rx="8"/><text class="lbl-c" x="326" y="170">Pin</text><text class="sub-c" x="326" y="184">behavior</text>
+    <path class="arw" d="M378,170 L394,170" marker-end="url(#ah4)"/>
+    <rect class="node" x="396" y="150" width="104" height="40" rx="8"/><text class="lbl-c" x="448" y="175">Find seams</text>
+    <path class="arw" d="M500,170 L506,170" marker-end="url(#ah4)"/>
+  </g>
+  <!-- Lane C -->
+  <g>
+    <rect class="node" x="16" y="252" width="120" height="40" rx="8"/><text class="lbl-c" x="76" y="277">Reproduce</text>
+    <path class="arw" d="M136,272 L156,272" marker-end="url(#ah4)"/>
+    <rect class="node" x="158" y="252" width="150" height="40" rx="8"/><text class="lbl-c" x="233" y="272">Pin + failing test</text>
+    <path class="arw" d="M308,272 C420,272 430,190 508,190" marker-end="url(#ah4)"/>
+  </g>
+  <!-- shared pipeline -->
+  <rect class="node" x="510" y="130" width="234" height="40" rx="8"/><text class="lbl-c" x="627" y="150">Core loop</text><text class="sub-c" x="627" y="164">spec → plan → build</text>
+  <path class="arw-a" d="M627,170 L627,190" marker-end="url(#aha4)"/>
+  <rect class="gate" x="510" y="192" width="234" height="40" rx="8"/><text class="lbl-c" x="627" y="212" font-family="ui-monospace, Menlo, monospace" font-size="12">leitwerk verify</text><text class="sub-c" x="627" y="226">tiered gate</text>
+  <path class="arw" d="M627,232 L627,252" marker-end="url(#ah4)"/>
+  <rect class="node" x="510" y="254" width="234" height="40" rx="8"/><text class="lbl-c" x="627" y="274">Human review</text><text class="sub-c" x="627" y="288">behavior / visual</text>
+</svg>
+<figcaption>Figure 4. All three use cases converge on one shared core loop, gate, and review. The difference is the prefix: architecture (A), onboarding + behavior-pinning (B), or reproduce + pin (C).</figcaption>
+</figure>
+
+<h3>8.1 Workflow A — Greenfield complex application</h3>
+<ol class="steps">
+  <li><b>Constitution interview.</b> <span class="who">Architect + human.</span> The one heavy human-input moment: stack, principles, tier rules, boundaries. Seed one high-quality exemplar per code type so the agent matches its style thereafter.<sup class="cite"><a href="#r-willison">2</a></sup></li>
+  <li><b>Architecture &amp; decomposition.</b> <span class="who">Architect (Opus 4.8+).</span> Design modules and seams; write initial ADRs; produce a feature list with every item marked "failing."</li>
+  <li><b>Per-feature loop.</b> <span class="who">Spec Steward → Scout → Implementer.</span> For each feature: write the spec, retrieve only the relevant context via the repo map, implement in small tiered tasks.</li>
+  <li><b>Gate.</b> <span class="who"><code>leitwerk verify</code> + verification panel.</span> Tier-selected checks plus the woken specialists must pass before the feature flips to "passing."</li>
+  <li><b>Review checkpoint.</b> <span class="who">UX / Visual Reviewer → human.</span> Human approves behavior and rendered result, not diffs. Feedback re-enters at the spec.</li>
+  <li><b>Consolidation.</b> <span class="who">Implementer (mechanical tier).</span> Scheduled de-duplication and dead-code passes keep erosion budgets green as the app grows.</li>
+</ol>
+
+<h3>8.2 Workflow B — Feature on an existing (possibly legacy) codebase</h3>
+<p>The difference from greenfield is a mandatory <em>onboarding</em> prefix, because the agent did not create this code and must not trust its own assumptions about it.</p>
+<ol class="steps">
+  <li><b>Index, don't ingest.</b> <span class="who">Scout (small) + tooling.</span> Build the repo map / code graph so retrieval, not context-stuffing, drives understanding.<sup class="cite"><a href="#r-repomap">9</a></sup></li>
+  <li><b>Reverse-derive specs with provenance.</b> <span class="who">Spec Steward (Opus 4.8+).</span> Extract behavioral specs for the affected area, labeling each claim <em>CONFIRMED / INFERRED / GAP</em>; INFERRED and GAP require human validation before they gain authority.<sup class="cite"><a href="#r-reversa">11</a></sup></li>
+  <li><b>Pin behavior.</b> <span class="who">Test Engineer.</span> Generate characterization tests over the area about to change — the regression net that makes the rest safe.<sup class="cite"><a href="#r-feathers">24</a></sup></li>
+  <li><b>Seam-bounded design.</b> <span class="who">Architect + human.</span> Find seams; plan the change as small, reversible, independently verifiable units (strangler-fig discipline), keeping the legacy path as fallback.<sup class="cite"><a href="#r-strangler">27</a></sup></li>
+  <li><b>Loop + gate + review.</b> As in Workflow A, with the characterization tests joining the gate so existing behavior cannot silently break.</li>
+</ol>
+<div class="note"><b>Why this order.</b> Raw LLM spec-extraction scores only ~0.64 F1 unaided<sup class="cite"><a href="#r-reversa">11</a></sup>, and characterization tests can lock in existing bugs as "correct." Provenance labeling and human validation of INFERRED claims are what make brownfield onboarding trustworthy rather than confidently wrong.</div>
+
+<h3>8.3 Workflow C — Bugfix on existing software</h3>
+<p>Optimized for speed at the lightest rigor the blast radius allows (P6), while still proving no regression.</p>
+<ol class="steps">
+  <li><b>Reproduce &amp; localize.</b> <span class="who">Scout (small) + Correctness Reviewer.</span> Reproduce the defect, then localize it via the code graph — structural navigation beats semantic search on hidden dependencies.<sup class="cite"><a href="#r-codegraph">28</a></sup></li>
+  <li><b>Pin, then fail.</b> <span class="who">Test Engineer.</span> Write a failing test that captures the bug plus a characterization test around the touched code.</li>
+  <li><b>Fix at the right tier.</b> <span class="who">Implementer.</span> Apply the minimal fix; the change's blast radius (T0/T1/T2) selects the gate and which specialists wake.</li>
+  <li><b>Gate = regression + tier checks.</b> <span class="who"><code>leitwerk verify</code>.</span> The new test passes, the characterization tests stay green, erosion budgets hold.</li>
+  <li><b>Review proportional to risk.</b> <span class="who">Human.</span> A T0 fix with a green gate may auto-land or be sampled; a T2 fix (auth, data, money) requires sign-off.<sup class="cite"><a href="#r-radar">23</a></sup></li>
+</ol>
+
+<h2 id="gate"><span class="num">9</span>Verification &amp; the gate</h2>
+<p><code>leitwerk verify</code> is one deterministic command, composed of tier-selected checks (Figure 5). The agent runs it locally; CI runs it authoritatively; on Claude Code it may also be wired as a stop / pre-commit hook so a task cannot end without a green gate. Gate <em>definitions</em> live in the constitution and are human-owned: an agent may propose a new check but cannot lower a threshold or disable one without a human-approved constitution change.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 760 300" role="img" aria-label="Blast-radius tiers: each tier adds cumulative checks and a stricter human checkpoint.">
+  <defs>
+    <marker id="ah5" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahf"/></marker>
+  </defs>
+  <!-- cumulative arrow -->
+  <path class="arw" d="M22,40 L22,250" marker-end="url(#ah5)"/>
+  <text class="sub-t" transform="translate(18,180) rotate(-90)">cumulative — each tier adds to the one above</text>
+  <!-- headers -->
+  <text class="grp" x="60" y="30">Tier &amp; checks (cumulative)</text>
+  <text class="grp" x="590" y="30">Human checkpoint</text>
+  <!-- T0 -->
+  <rect class="layer t0s" x="44" y="40" width="516" height="62" rx="8" stroke-width="2"/>
+  <rect class="t0f" x="44" y="40" width="118" height="62" rx="8"/><rect class="t0f" x="120" y="40" width="42" height="62"/>
+  <text class="tab-t" x="52" y="66">T0</text><text class="tab-t" x="52" y="84" font-weight="400" font-size="10.5">read-only</text>
+  <text class="body-t" x="176" y="66">compile · types · lint · SAST on diff</text>
+  <text class="body-t" x="176" y="86">· dependency allowlist · erosion budgets</text>
+  <rect class="node t0s" x="576" y="40" width="160" height="62" rx="8"/><text class="lbl-c" x="656" y="66">visual review</text><text class="sub-c" x="656" y="84">sampled / auto-land</text>
+  <!-- T1 -->
+  <rect class="layer t1s" x="44" y="118" width="516" height="62" rx="8" stroke-width="2"/>
+  <rect class="t1f" x="44" y="118" width="118" height="62" rx="8"/><rect class="t1f" x="120" y="118" width="42" height="62"/>
+  <text class="tab-t" x="52" y="144">T1</text><text class="tab-t" x="52" y="162" font-weight="400" font-size="10.5">mutating</text>
+  <text class="body-t" x="176" y="144">+ property &amp; contract tests · invariants</text>
+  <text class="body-t" x="176" y="164">· mutation-score floor · acceptance tests</text>
+  <rect class="node t1s" x="576" y="118" width="160" height="62" rx="8"/><text class="lbl-c" x="656" y="144">spec + behavior</text><text class="sub-c" x="656" y="162">review</text>
+  <!-- T2 -->
+  <rect class="layer t2s" x="44" y="196" width="516" height="62" rx="8" stroke-width="2"/>
+  <rect class="t2f" x="44" y="196" width="118" height="62" rx="8"/><rect class="t2f" x="120" y="196" width="42" height="62"/>
+  <text class="tab-t" x="52" y="222">T2</text><text class="tab-t" x="52" y="240" font-weight="400" font-size="10.5">irreversible</text>
+  <text class="body-t" x="176" y="222">+ safety assertions on the destructive op</text>
+  <text class="body-t" x="176" y="242">· dry-run / rollback proof · characterization</text>
+  <rect class="node t2s" x="576" y="196" width="160" height="62" rx="8" stroke-width="2"/><text class="lbl-c" x="656" y="222" font-weight="700">mandatory</text><text class="sub-c" x="656" y="240">human sign-off</text>
+  <!-- cross-cutting -->
+  <text class="sub-t" x="44" y="284">Every tier also runs the drift sensor (spec↔code anchors resolve) and an advisory LLM-as-judge panel — never the sole gate.</text>
+</svg>
+<figcaption>Figure 5. Blast-radius tiers. Checks and human scrutiny accumulate with the potential damage of a change.</figcaption>
+</figure>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Tier</th><th>Examples</th><th>Gate (cumulative)</th><th>Human checkpoint</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill t0">T0</span> read-only / display</td><td>rendering, formatting, read queries, logging</td><td>compile/types · lint · SAST on diff · dependency allowlist · erosion budgets</td><td>visual / functional review; may be sampled or auto-landed</td></tr>
+    <tr><td><span class="pill t1">T1</span> state-mutating</td><td>writes, business logic, workflows, non-destructive APIs</td><td>+ property &amp; contract tests · state invariants · mutation-score floor · behavior-level acceptance tests</td><td>spec + behavior review</td></tr>
+    <tr><td><span class="pill t2">T2</span> irreversible / infra</td><td>deletes, migrations, money, permissions, auth, infra/config</td><td>+ explicit safety assertions on the destructive op · dry-run / rollback proof · characterization tests green</td><td><strong>mandatory human sign-off</strong></td></tr>
+  </tbody>
+</table>
+</div>
+<p>Two cross-cutting checks run at every tier. The <strong>drift sensor</strong> confirms spec fragments still resolve to the code and tests they are anchored to; unresolved anchors are drift and are surfaced to a human to reconcile (never auto-resolved). An <strong>LLM-as-judge / panel review</strong> runs as an <em>advisory</em> annotation only — never the sole gate, because same-model reviewers share the generator's blind spots<sup class="cite"><a href="#r-judge">29</a></sup>.</p>
+<div class="note"><b>Mutation score, not line coverage.</b> AI-written tests frequently achieve high coverage while asserting nothing meaningful. A mutation-score floor — deliberately injecting faults and requiring the suite to catch them — is what proves the tests are load-bearing rather than decorative.</div>
+
+<h2 id="hitl"><span class="num">10</span>Human-in-the-loop</h2>
+<p>Humans own exactly two things: the <strong>constitution and specs</strong> (intent) and the <strong>behavioral / visual review</strong> (acceptance). Everything between is machine-gated. Three rules keep oversight cheap without losing safety.</p>
+<div class="grid">
+  <div class="card"><span class="tag">Review behavior, not diffs</span><p>Reviewers see rendered screenshots and visual diffs (approve / reject / ignore, grouped by cosmetic / functional / critical), acceptance scenarios in business language, and the drift report — the artifacts humans judge well.</p></div>
+  <div class="card"><span class="tag">Risk-tier and prune on data</span><p>Start with checkpoints at every high-risk step; track approval and revert rates; remove checkpoints where humans approve ~99% and never modify. This is the RADAR funnel that auto-lands ~60% of diffs safely.<sup class="cite"><a href="#r-radar">23</a></sup></p></div>
+  <div class="card"><span class="tag">Design against over-trust</span><p>Self-reported confidence is unreliable<sup class="cite"><a href="#r-metr">21</a></sup>. Drive checkpoint pruning from objective signals — revert rate, incident rate, regression escapes, per-cohort pass rates — not from how fast the work feels.</p></div>
+  <div class="card"><span class="tag">Bidirectional refinement</span><p>Feedback after review, or an expert's hand-edit, updates the spec: the Spec Steward proposes a reverse-derived spec change (labeled INFERRED) for human confirmation. The spec stays authoritative; the code is allowed to lead when an expert wants it to.</p></div>
+</div>
+
+<h2 id="adoption"><span class="num">11</span>Adoption: Claude Code &amp; open agents</h2>
+<p>Leitwerk's core — the artifacts, roles, workflows, and gate — is tool-agnostic. Each tool gets a thin binding. The <code>leitwerk verify</code> gate is a plain executable wired into CI, so the strongest guarantee never depends on a particular agent runtime.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Leitwerk concept</th><th>Claude Code binding</th><th>Open-agent binding (Codex / open tooling)</th></tr></thead>
+  <tbody>
+    <tr><td>Constitution &amp; project context</td><td><code>CLAUDE.md</code> + <code>leitwerk/constitution.md</code></td><td><code>AGENTS.md</code> (+ per-module <code>AGENTS.md</code>)</td></tr>
+    <tr><td>Roles</td><td>subagents in <code>.claude/agents/*.md</code>, spawned by the Orchestrator</td><td>agent definitions in <code>.agents/</code>; model/router in <code>.codex/config.toml</code></td></tr>
+    <tr><td>Workflow phases</td><td>skills in <code>.claude/skills/</code> (<code>leitwerk-onboard/spec/plan/build/review</code>)</td><td>portable skills in <code>.agents/skills/</code> + prompt templates</td></tr>
+    <tr><td>Model routing</td><td>per-subagent model + effort settings</td><td>router config in <code>.codex/config.toml</code></td></tr>
+    <tr><td>Gate enforcement</td><td><code>leitwerk verify</code> as a stop / pre-commit hook + CI</td><td><code>leitwerk verify</code> in CI (required check)</td></tr>
+    <tr><td>Durable memory</td><td>repo <code>leitwerk/</code> tree + progress JSON</td><td>identical repo <code>leitwerk/</code> tree</td></tr>
+  </tbody>
+</table>
+</div>
+<p>This maps onto substrate the target repository already has — <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, and <code>.agents/</code> coexist today — so adoption formalizes existing structure rather than introducing a new one. The current phased skills (research / plan / implement / validate) are the predecessors Leitwerk's <code>leitwerk-*</code> skills replace once proven.</p>
+
+<h2 id="evaluation"><span class="num">12</span>Evaluation plan</h2>
+<p>Leitwerk should be judged on sustained delivery, not one-shot benchmarks — headline SWE-bench numbers are contaminated and skewed toward trivial fixes<sup class="cite"><a href="#r-swebench">30</a></sup>; long-horizon, multi-file suites (SWE-bench Pro, SWE-rebench) are the honest signal. Proposed rollout and metrics:</p>
+<ol>
+  <li><strong>Phase 0 — the gate first.</strong> Build <code>leitwerk verify</code> (tiered DoD + drift sensor + erosion budgets) and wire it into CI on one existing application. Highest leverage, best evidence, immediate value before any role exists.</li>
+  <li><strong>Phase 1 — greenfield loop</strong> on one new small application end-to-end.</li>
+  <li><strong>Phase 2 — brownfield adoption</strong> (repo map, provenance spec extraction, characterization tests) on one existing application.</li>
+  <li><strong>Phase 3 — long-lived hardening</strong>: consolidation passes, checkpoint pruning from telemetry, growing golden suite with per-cohort monitoring.</li>
+</ol>
+<p><strong>Metrics.</strong> Revert rate and production-incident rate of AI-landed changes (vs. a manual baseline); regression escapes caught by the golden suite; mutation score trend; duplication / complexity / churn against budget; human review minutes per landed change; drift incidents surfaced vs. shipped. Success is <em>flat-or-improving</em> quality metrics as the codebase grows — the erosion the evidence predicts, not observed.</p>
+
+<h2 id="limitations"><span class="num">13</span>Limitations &amp; open questions</h2>
+<p>Leitwerk is a synthesis of what the 2023–2026 record shows works; several load-bearing pieces are nonetheless under-proven, and the framework should be adopted with that in view.</p>
+<ul>
+  <li><strong>Bidirectional refinement is the least-charted part.</strong> Most tools avoid it by marking generated code read-only. Leitwerk's "surface drift, human reconciles" model is deliberately conservative, but reverse-deriving a spec from a hand-edit is error-prone and unproven at scale — this is where the design is most exposed.</li>
+  <li><strong>Spec-completeness becomes the ballgame.</strong> If humans never read code, the only human-anchored ground truth is the spec and the behavioral review. Under-specified behavior is invisible until it fails.</li>
+  <li><strong>Drift-anchor mechanism is unsettled</strong> (AST fingerprint vs. spec-id comments vs. test-name convention) and determines drift-sensor precision.</li>
+  <li><strong>Agents remain weak at system-wide architecture</strong> — the framework relies on humans for decomposition and seams (P9); it does not remove that dependency, it channels it.</li>
+  <li><strong>Long-lived AI-authored projects are too new for longitudinal evidence</strong>; the maintenance claims rest on 2025–2026 practice and preprints, not multi-year studies.</li>
+  <li><strong>Part of the evidence base is perishable by design.</strong> The model-capability snapshots in §2 (security-failure rates, the context-rot threshold, iteration-degradation, the productivity delta) were measured on GPT-4-class or early-2025 models; they are dated in §14 and meant to be re-checked. As long-context reliability and secure-by-default behaviour improve, the <em>necessity</em> of P4 (retrieve, don't preload) and the <em>intensity</em> of the security gate should be re-tuned — the framework treats this as scheduled maintenance of its own assumptions, not a fixed liability.</li>
+</ul>
+<p>These are tracked as the questions Phases 0–1 must answer with evidence rather than assumption.</p>
+
+<h2 id="references"><span class="num">14</span>References</h2>
+<ol class="refs">
+  <li id="r-sdd">Fowler &amp; Böckeler. <em>Understanding Spec-Driven Development: Kiro, spec-kit, and Tessl.</em> <a href="https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html">link</a><span class="ref-meta"><span class="qtag">practitioner</span>2025 · conceptual comparison of SDD tools, no benchmark · durable.</span></li>
+  <li id="r-willison">Willison, S. <em>Agentic Engineering Patterns.</em> <a href="https://simonwillison.net/2026/Feb/23/agentic-engineering-patterns/">link</a><span class="ref-meta"><span class="qtag">practitioner</span>Feb 2026 · field-tested opinion on agentic coding · durable.</span></li>
+  <li id="r-vogels">Vogels, W. <em>The Renaissance Developer — re:Invent 2025 keynote (specs as code).</em> <a href="https://www.sls.guru/blog/recap-of-dr-werner-vogels-aws-re-invent-2025-keynote-the-renaissance-developer">recap</a><span class="ref-meta"><span class="qtag vendor">vendor</span>Nov 2025 · Amazon internal spec-driven dev; ~50%-faster claim is vendor-reported · perishable.</span></li>
+  <li id="r-cloudflare">Cloudflare. <em>Orchestrating AI Code Review at scale.</em> <a href="https://blog.cloudflare.com/ai-code-review/">link</a><span class="ref-meta"><span class="qtag vendor">vendor</span>2025 · production system, 7 specialist LLM reviewers; not a controlled benchmark · pattern durable.</span></li>
+  <li id="r-masai">Arora et al. <em>MASAI: Modular Architecture for Software-engineering AI Agents.</em> arXiv:2406.11638. <a href="https://arxiv.org/pdf/2406.11638">link</a><span class="ref-meta"><span class="qtag">preprint</span>Jun 2024 · GPT-4-class on SWE-bench Lite · modular-scoping finding durable; scores perishable.</span></li>
+  <li id="r-agentless">Xia et al. <em>Agentless: Demystifying LLM-based Software Engineering Agents.</em> arXiv:2407.01489. <a href="https://arxiv.org/abs/2407.01489">link</a><span class="ref-meta"><span class="qtag peer">peer-reviewed</span>FSE 2025 (arXiv Jul 2024) · GPT-4o-class, SWE-bench Lite · "beat open-source agents" is mid-2024 leaderboard-relative; technique durable.</span></li>
+  <li id="r-clover">Sun et al. <em>Clover: Closed-Loop Verifiable Code Generation.</em> arXiv:2310.17807. <a href="https://arxiv.org/abs/2310.17807">link</a><span class="ref-meta"><span class="qtag">preprint</span>Oct 2023 (VerifAI 2024) · GPT-4 on CloverBench (Dafny, formally-verifiable, narrow) · zero-FP result is domain-specific.</span></li>
+  <li id="r-alphacodium">Ridnik et al. <em>Code Generation with AlphaCodium: From Prompt to Flow Engineering.</em> arXiv:2401.08500. <a href="https://arxiv.org/abs/2401.08500">link</a><span class="ref-meta"><span class="qtag">preprint</span>Jan 2024 (Qodo) · GPT-4 on CodeContests · absolute figure GPT-4-specific; "flow beats prompt" durable.</span></li>
+  <li id="r-repomap">Aider. <em>Repository map (tree-sitter + PageRank) &amp; Architect/Editor mode.</em> <a href="https://aider.chat/docs/repomap.html">repomap</a> · <a href="https://aider.chat/2024/09/26/architect.html">architect</a><span class="ref-meta"><span class="qtag">practitioner / OSS</span>2023–2024 · architect/editor SOTA paired o1 + editor (late 2024) · author-argued, no controlled study; technique durable.</span></li>
+  <li id="r-codified"><em>Codified Context: Infrastructure for AI Agents in a Complex Codebase.</em> arXiv:2602.20478. <a href="https://arxiv.org/html/2602.20478v1">link</a><span class="ref-meta"><span class="qtag">preprint</span>Feb 2026 (recent, lightly vetted) · single 108K-line C# system, Claude Code, 283 sessions · observational, single-project.</span></li>
+  <li id="r-reversa"><em>Reversa: agentic spec extraction with CONFIRMED / INFERRED / GAP provenance.</em> arXiv:2605.18684. <a href="https://arxiv.org/html/2605.18684">link</a><span class="ref-meta"><span class="qtag">preprint</span>May 2026 (single exploratory COBOL→Go case) · provenance-labeling method. The ~0.64-F1 raw-extraction figure cited in §8.2 is GPT-4-class, from reverse-engineering benchmarks.</span></li>
+  <li id="r-veracode">Veracode. <em>2025 GenAI Code Security Report.</em> <a href="https://www.veracode.com/blog/genai-code-security-report/">link</a><span class="ref-meta"><span class="qtag vendor">vendor</span>Jul 2025 · 100+ models, 4 languages; security-vendor report · snapshot — re-check as models improve.</span></li>
+  <li id="r-secdeg"><em>Security Degradation in Iterative AI Code Generation.</em> arXiv:2506.11022. <a href="https://arxiv.org/html/2506.11022v1">link</a><span class="ref-meta"><span class="qtag">preprint</span>Jun 2025 · 2025-era models over 5 refinement iterations · iteration behaviour is model-bound; perishable.</span></li>
+  <li id="r-gitclear">GitClear. <em>AI Copilot Code Quality 2025 (211M changed lines).</em> <a href="https://www.gitclear.com/ai_assistant_code_quality_2025_research">link</a><span class="ref-meta"><span class="qtag vendor">vendor</span>2025 · 2020–2024 trend; partly proprietary method · historical trend, direction durable.</span></li>
+  <li id="r-slop">USENIX Security 2025 (reported via Snyk). <em>Slopsquatting: package-hallucination in LLM code.</em> <a href="https://snyk.io/articles/slopsquatting-mitigation-strategies/">link</a><span class="ref-meta"><span class="qtag peer">peer-reviewed</span>2025 · 16 LLMs incl. GPT / open models; 19.7% hallucinated packages · rate perishable, asymmetric risk durable.</span></li>
+  <li id="r-lostmiddle">Liu et al. <em>Lost in the Middle: How Language Models Use Long Contexts.</em> arXiv:2307.03172. <a href="https://arxiv.org/abs/2307.03172">link</a><span class="ref-meta"><span class="qtag peer">peer-reviewed</span>TACL 2023 · 2023-era long-context models · U-shaped bias softening on newer models.</span></li>
+  <li id="r-contextrot">Chroma. <em>Context Rot: How Increasing Input Tokens Impacts LLM Performance.</em> <a href="https://www.trychroma.com/research/context-rot">link</a><span class="ref-meta"><span class="qtag vendor">vendor</span>2025 · 18 frontier models as of mid-2025 · the "50K" threshold is model-generation-bound — Opus-4.8-class degrades far less; cited as motivation for retrieval, not a fixed limit.</span></li>
+  <li id="r-selfcond"><em>On Training LLMs for Long-Horizon Tasks (self-conditioning).</em> arXiv:2605.02572. <a href="https://arxiv.org/html/2605.02572v1">link</a><span class="ref-meta"><span class="qtag">preprint</span>2026 (lightly vetted) · error compounding over long horizons · directional.</span></li>
+  <li id="r-harness">Anthropic Engineering. <em>Effective harnesses for long-running agents</em> <a href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents">link</a>; <em>multi-agent research system</em> <a href="https://www.anthropic.com/engineering/multi-agent-research-system">link</a>.<span id="r-multiagent"></span><span class="ref-meta"><span class="qtag vendor">vendor</span>2025 · Claude models, internal evals · practices durable; internal numbers.</span></li>
+  <li id="r-adr">Nexapp. <em>Architecture Decision Records: aligning teams and AI agents.</em> <a href="https://www.nexapp.ca/en/blog/architecture-decision-records-adr">link</a><span class="ref-meta"><span class="qtag">practitioner</span>2025 · conceptual (ADRs as durable agent memory) · durable.</span></li>
+  <li id="r-metr">METR. <em>Measuring the Impact of Early-2025 AI on Experienced Developer Productivity.</em> arXiv:2507.09089. <a href="https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/">link</a><span class="ref-meta"><span class="qtag">study (RCT)</span>Jul 2025 · 16 experienced OSS devs, 246 tasks, early-2025 tools; authors revised the design Feb 2026 · magnitude contested / perishable, perception-gap durable.</span></li>
+  <li id="r-autobias">Springer. <em>Exploring automation bias in human–AI collaboration.</em> <a href="https://link.springer.com/article/10.1007/s00146-025-02422-7">link</a><span class="ref-meta"><span class="qtag peer">peer-reviewed</span>2025 · human-factors, model-independent · durable.</span></li>
+  <li id="r-radar">Meta. <em>Automating Low-Risk Code Review at Meta (RADAR).</em> arXiv:2605.30208. <a href="https://arxiv.org/abs/2605.30208">link</a><span class="ref-meta"><span class="qtag">preprint (industry)</span>2026 · Meta production, 535K+ diffs, ML risk score · org-specific, fresh.</span></li>
+  <li id="r-feathers">Feathers, M. <em>Working Effectively with Legacy Code</em> — characterization tests. <a href="https://en.wikipedia.org/wiki/Characterization_test">overview</a><span class="ref-meta"><span class="qtag">book</span>2004 · canonical legacy-code practice, model-independent · durable.</span></li>
+  <li id="r-google">Google. <em>Migrating Code At Scale With LLMs At Google.</em> arXiv:2504.09691. <a href="https://arxiv.org/abs/2504.09691">link</a><span class="ref-meta"><span class="qtag peer">peer-reviewed</span>FSE 2025 · fine-tuned Gemini, Google monorepo, 39 migrations · strong large-scale data; method durable.</span></li>
+  <li id="r-refactor"><em>Agentic Refactoring: an empirical study (154K refactorings).</em> arXiv:2511.04824. <a href="https://arxiv.org/html/2511.04824v1">link</a><span class="ref-meta"><span class="qtag">preprint</span>late 2025 · mostly OpenAI Codex, 14,998 Java commits · observational; direction durable.</span></li>
+  <li id="r-strangler">Fowler, M. <em>Strangler Fig Application</em> <a href="https://martinfowler.com/bliki/StranglerFigApplication.html">link</a> · Shopify Engineering, <a href="https://shopify.engineering/refactoring-legacy-code-strangler-fig-pattern">production refactor</a><span class="ref-meta"><span class="qtag">practitioner</span>pattern + production account · model-independent · durable.</span></li>
+  <li id="r-codegraph"><em>Code-graph navigation vs. semantic search for repository understanding.</em> <a href="https://zylos.ai/research/2026-04-19-codebase-intelligence-repository-understanding-ai-agents">summary</a><span class="ref-meta"><span class="qtag vendor">vendor</span>2026 · not independently replicated · directional.</span></li>
+  <li id="r-judge"><em>LLM-as-a-Judge for Software Engineering: Literature Review, Vision, Road Ahead.</em> arXiv:2510.24367. <a href="https://arxiv.org/pdf/2510.24367">link</a><span class="ref-meta"><span class="qtag">preprint (survey)</span>2025 · literature review · conceptual.</span></li>
+  <li id="r-swebench">Jimenez et al. <em>SWE-bench</em> (ICLR 2024) &amp; <em>SWE-bench Pro</em> (arXiv:2509.16941). <a href="https://arxiv.org/html/2509.16941v1">link</a><span class="ref-meta"><span class="qtag peer">peer-reviewed</span>ICLR 2024 + Pro (2025) · benchmark methodology · original contaminated / trivial-skewed; Pro harder, long-horizon.</span></li>
+</ol>
+
+<div class="footer">
+  <p>Leitwerk · Draft 0.1 · 2026-07-19. Working name; framework is tool-agnostic. Prepared as a design artifact for review — see the companion documents in this repository, <code>docs/decisions/research-briefing.md</code> and <code>docs/decisions/design-proposal.md</code>, for the full evidence base and rationale.</p>
+</div>
+
+</div>
+
+<script>
+  (function () {
+    // theme toggle
+    var btn = document.getElementById('tt');
+    function current() {
+      var attr = document.documentElement.getAttribute('data-theme');
+      if (attr) return attr;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    btn.addEventListener('click', function () {
+      document.documentElement.setAttribute('data-theme', current() === 'dark' ? 'light' : 'dark');
+    });
+
+    // scroll progress + section rail (built from the document's own headings)
+    var bar = document.getElementById('progressbar');
+    var spy = document.getElementById('scrollspy');
+    var heads = Array.prototype.slice.call(document.querySelectorAll('h2[id]'));
+    var items = heads.map(function (h) {
+      var clone = h.cloneNode(true);
+      var n = clone.querySelector('.num'); if (n) n.remove();
+      var num = h.querySelector('.num') ? h.querySelector('.num').textContent.trim() : '';
+      var a = document.createElement('a');
+      a.className = 'spy-item';
+      a.href = '#' + h.id;
+      a.innerHTML = '<span class="spy-num">' + num + '</span>' +
+                    '<span class="spy-label">' + clone.textContent.trim() + '</span>' +
+                    '<span class="spy-dot"></span>';
+      spy.appendChild(a);
+      return { head: h, el: a };
+    });
+
+    var hovering = false, idle;
+    function reveal() {
+      spy.classList.add('visible');
+      clearTimeout(idle);
+      idle = setTimeout(function () { if (!hovering) spy.classList.remove('visible'); }, 1500);
+    }
+    spy.addEventListener('mouseenter', function () { hovering = true; spy.classList.add('visible'); clearTimeout(idle); });
+    spy.addEventListener('mouseleave', function () { hovering = false; reveal(); });
+
+    function update() {
+      var doc = document.documentElement;
+      var st = window.pageYOffset || doc.scrollTop;
+      var max = doc.scrollHeight - doc.clientHeight;
+      bar.style.width = (max > 0 ? (st / max) * 100 : 0) + '%';
+      var active = 0;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].head.getBoundingClientRect().top <= 140) active = i;
+      }
+      for (var j = 0; j < items.length; j++) {
+        items[j].el.classList.toggle('active', j === active);
+      }
+    }
+
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(function () { update(); reveal(); ticking = false; });
+      }
+    }, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    update();
+  })();
+</script>
+</body>
+</html>

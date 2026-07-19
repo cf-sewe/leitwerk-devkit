@@ -1,0 +1,26 @@
+# leitwerk tiers — maps blast-radius tiers to checks, and paths to tiers.
+#
+# Tiers escalate by blast radius (Section 9 of the whitepaper):
+#   T0  read-only / display code           — cheap, fast checks
+#   T1  state-mutating application code     — behaviour + drift
+#   T2  irreversible / infra / data         — everything, plus safety checks
+#
+# Gates are CUMULATIVE: a T2 change runs T0 + T1 + T2 checks.
+# This file is human-owned. An agent may propose a new check but may not lower a
+# threshold or remove a check without a human-approved change here.
+
+[tiers]
+T0 = lint
+T1 = lint types tests drift
+T2 = lint types tests drift sast erosion
+
+[paths]
+# glob = tier   (first match wins; put the most specific rules first)
+docs/**          = T0
+**/*.md          = T0
+**/db/migrations/** = T2
+**/*.sql         = T2
+infra/**         = T2
+**/*.tf          = T2
+**/*.yaml        = T2
+*                = T1

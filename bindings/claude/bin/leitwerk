@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Launcher: the plugin's bin/ is on the Bash PATH when the plugin is enabled, so
+# skills and hooks can call `leitwerk` by name. This shim locates the real
+# tool-agnostic core CLI (bindings never reimplement the gate).
+#
+# Resolution order:
+#   1. $LEITWERK_HOME/bin/leitwerk         (explicit install)
+#   2. core/ in the same checkout          (whole-repo clone / dev)
+#   3. a vendored core/ next to the plugin (git-subdir install may vendor it)
+#   4. a globally installed CLI            (npm i -g @cf-sewe/leitwerk)
+set -euo pipefail
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+for cand in \
+  "${LEITWERK_HOME:-}/bin/leitwerk" \
+  "$SELF_DIR/../../../core/bin/leitwerk" \
+  "$SELF_DIR/../core/bin/leitwerk"; do
+  if [ -n "$cand" ] && [ -x "$cand" ]; then exec "$cand" "$@"; fi
+done
+
+real="$(command -v -a leitwerk 2>/dev/null | grep -vF "$SELF_DIR/leitwerk" | head -1 || true)"
+if [ -n "$real" ]; then exec "$real" "$@"; fi
+
+echo "leitwerk: core CLI not found. Install it with: npm i -g @cf-sewe/leitwerk" >&2
+echo "         (or set LEITWERK_HOME to the core/ directory)" >&2
+exit 127
