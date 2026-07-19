@@ -419,7 +419,7 @@
   <rect class="small" x="300" y="392" width="26" height="16" rx="4"/>
   <text class="lbl" x="334" y="405">small / fast — routine work</text>
 </svg>
-<figcaption>Figure 3. The role ensemble. The Orchestrator delegates to four bands; fill colour marks the default model tier. The verification panel is independent of the roles that produced the work.</figcaption>
+<figcaption>Figure 3. The role ensemble. The Orchestrator delegates to four bands; fill colour marks the default model tier. The verification panel is independent of the roles that produced the work. On Claude Code the ensemble is realized by a dynamic workflow (Section 7) rather than a bespoke orchestrator role.</figcaption>
 </figure>
 
 <div class="scroll">
@@ -479,6 +479,9 @@
 </div>
 <h4>Human-summoned</h4>
 <p>A human can invoke any role directly ("have the security specialist look at this") at any point — the escape hatch that keeps humans in control without reading code.</p>
+
+<h3 id="realization">Realization: native orchestration where the platform provides it</h3>
+<p>The ensemble and its trigger table are the tool-agnostic <em>design</em>; each platform realizes them with its own mechanism. On Claude Code, this layer is not a bespoke orchestrator role — it is a <strong>dynamic workflow</strong>: a deterministic orchestration script that fans roles out in parallel and has independent agents attempt to <em>refute</em> each finding before it counts. The mapping is direct: the orchestrator becomes the workflow script (control flow in code, not model discretion); the roles become the workflow's <code>agentType</code>s, reused unchanged; the trigger table becomes the workflow's tier-driven fan-out. Two properties keep this honest. First, workflows are opt-in and scaled by blast radius — a full adversarial panel runs for T2, while T0/T1 stay lightweight. Second, and decisively, the workflow's verification is <em>soft</em> (agents judging agents, better because it is adversarial and diverse, but still model judgment); it never replaces the <em>hard</em> gate. <code>leitwerk verify</code> remains an external oracle the workflow cannot overrule, enforced at turn end regardless of how the panel voted. Platforms without such an engine (open-code / Codex) run the roles sequentially and lean on the same gate in CI — the guarantee is identical because it lives in the gate, not the orchestration.</p>
 
 <h2 id="workflows"><span class="num">8</span>Workflows: greenfield, feature, bugfix</h2>
 <p>The three use cases share the core loop — <em>spec → plan → build → verify → review</em> — but enter it differently and weight the bands differently (Figure 4). Greenfield leads with architecture; a feature on existing code must first <em>onboard</em> and pin behavior; a bugfix optimizes for the lightest safe path.</p>

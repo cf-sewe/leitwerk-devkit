@@ -359,3 +359,19 @@ auto-regenerating. It covers greenfield, brownfield, and long-lived projects
 through one onboarding skill and a small durable-artifact layer designed for
 cold-start recovery. Every principle traces to a measured failure mode in the
 companion research briefing.
+
+## Addendum — 2026-07-19: Layer-2 orchestration via native dynamic workflows
+
+Claude Code's dynamic workflows supersede the originally proposed hand-rolled
+orchestrator subagent and prose trigger table. On Claude Code, Layer 2 (roles /
+orchestration / adversarial review) is realized by a deterministic workflow
+script that fans the role subagents out in parallel and refutes findings before
+they count; the roles are reused as workflow `agentType`s and the trigger table
+becomes the workflow's tier-driven fan-out. This changes only the realization of
+Layer 2 — Layer 1 (durable artifacts) and Layer 3 (the deterministic
+`leitwerk verify` gate) are unchanged, and the workflow's soft verification never
+replaces the hard external gate. Because plugins cannot package workflows,
+orchestration ships via the review/build skills invoking the `Workflow` tool plus
+a saved `.claude/workflows/leitwerk-review.mjs`. Open-code tools lack an
+equivalent engine and fall back to sequential roles + the CI gate. See
+`leitwerk/specs/workflow-orchestration.md`.

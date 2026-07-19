@@ -23,3 +23,8 @@ Aider, Zed, Jules, and others.
 On Claude Code the gate is enforced client-side by a Stop hook. Open-code tools
 have no common hook mechanism, so enforcement moves to CI. The command is
 identical — only where it is enforced differs.
+
+Open code also has no equivalent to Claude Code's dynamic workflows, so the
+multi-agent adversarial review (Layer 2) is not orchestrated automatically here —
+run the roles sequentially or as review lenses. What keeps the guarantee intact
+across both worlds is the same external gate: `leitwerk verify` in CI.

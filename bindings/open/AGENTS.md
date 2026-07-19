@@ -18,7 +18,7 @@ a prediction; the CI run is the record. Do not merge on a red gate.
 
 ## Working method
 1. **Spec first.** Non-trivial work starts from a spec in `leitwerk/specs/`
-   (template: `leitwerk/templates/spec.template.md`). It states the observable
+   (template: `core/templates/spec.template.md`, shipped with the CLI). It states the observable
    contract, the invariants touched, and the blast-radius tier.
 2. **Plan into gated steps.** Each step leaves the gate green on its own.
 3. **Write the oracle before new behaviour.** Bugs get a failing regression test
@@ -37,12 +37,25 @@ apply them as review lenses. Wake them by signal:
 - architect — cross-subsystem or structural change.
 - scout — cheap read-only retrieval; use the smallest model.
 
+Note: unlike Claude Code, open-code tools have no built-in workflow engine to
+orchestrate these roles in parallel with adversarial verification. Run them
+sequentially (or as review lenses) and rely on the CI gate as the hard,
+authoritative check. The roles are advisory; `leitwerk verify` in CI is binding.
+
 ## Blast-radius tiers
 - **T0** read-only / display — light checks.
 - **T1** state-mutating application code — behaviour + drift checks.
 - **T2** irreversible / infra / data (migrations, IaC, billing, auth) — all
   checks plus SAST, dependency policy, and an explicit rollback.
 
-## Constitution
+## Constitution and human-owned files
 Project invariants and Definition of Done live in `leitwerk/constitution.md`.
-It is human-owned. Propose changes to it; do not edit it unilaterally.
+It, `leitwerk/tiers.conf`, and `leitwerk/roadmap.md` are **human-owned**: propose
+changes, do not edit them unilaterally. `leitwerk guard <path>` reports whether a
+path is human-owned (the list is `[human-owned]` in the tiers file).
+
+Claude Code blocks these edits with a `PreToolUse` hook; open-code tools have no
+universal pre-edit hook, so enforce the same boundary with **required review** —
+a CODEOWNERS entry (or equivalent) so a human must approve any change to those
+paths. This is a guardrail. The hard guarantee is still the CI gate, which every
+tool shares equally.

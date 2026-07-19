@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# PreToolUse guard for Claude Code. The plugin's bin/ is on the Bash PATH when
+# enabled, so this runs before Write/Edit. It parses the Claude hook payload
+# (stdin JSON), pulls out the target file path, and asks the tool-agnostic core
+# whether that path is human-owned. The DECISION lives in core (`leitwerk guard`,
+# whose list is `[human-owned]` in the tiers file) — this wrapper only adapts the
+# Claude-specific payload and translates a block into exit code 2, which is what
+# denies the tool call. It does not fork the list (bindings never reimplement the
+# gate).
+set -euo pipefail
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+payload="$(cat)"
+
+# Extract tool_input.file_path from the payload with whatever JSON reader exists.
+extract() {
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null
+  elif command -v node >/dev/null 2>&1; then
+    printf '%s' "$payload" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write((JSON.parse(s).tool_input||{}).file_path||"")}catch{}})' 2>/dev/null
+  elif command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$payload" | python3 -c 'import sys,json;
+try: print((json.load(sys.stdin).get("tool_input") or {}).get("file_path",""),end="")
+except Exception: pass' 2>/dev/null
+  else
+    # Last-resort text scrape; good enough to fail safe on the common shape.
+    printf '%s' "$payload" | sed -n 's/.*"file_path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1
+  fi
+}
+
+fp="$(extract || true)"
+[ -n "$fp" ] || exit 0   # nothing to guard (e.g. a payload we could not parse)
+
+# Delegate the decision to core via the launcher (which resolves core/bin/leitwerk).
+if "$SELF_DIR/leitwerk" guard "$fp"; then
+  exit 0
+fi
+# guard exited non-zero: the path is human-owned. Deny the edit. stderr from the
+# guard is fed back to Claude as the reason.
+exit 2

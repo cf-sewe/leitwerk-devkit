@@ -43,3 +43,18 @@ jobs:
 
       - name: Run the gate
         run: leitwerk verify --tier "${{ steps.tier.outputs.tier }}"
+
+  parity:
+    # Proves open-code guarantee-parity: the core gate runs with NO agent runtime
+    # (no Claude Code, no plugin) and deliberately without extra toolchain setup.
+    # If this is green, an open-code adopter gets the same hard guarantee.
+    name: open-code parity (no agent runtime)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Put in-tree CLI on PATH
+        run: echo "$PWD/core/bin" >> "$GITHUB_PATH"
+      - name: Boundary + core gate, shell-only
+        run: |
+          leitwerk/checks/parity.sh
+          leitwerk verify --tier T2

@@ -22,7 +22,29 @@ assert "markdown is T0"   T0 "$("$CLI" tier docs/guide.md)"
 assert "app code is T1"   T1 "$("$CLI" tier src/app.py)"
 unset LEITWERK_TIERS
 
-# 2. The gate runs green on the bundled example (proves end-to-end execution).
+# 2. The human-owned guard: a protected path is blocked, others are editable.
+#    Test against the shipped default list so the assertion is deterministic.
+export LEITWERK_TIERS="$PWD/core/leitwerk.tiers"
+if "$CLI" guard leitwerk/constitution.md >/dev/null 2>&1; then
+  echo "FAIL: guard allowed edit to a human-owned file" >&2; fail=1
+fi
+if "$CLI" guard /abs/path/to/leitwerk/tiers.conf >/dev/null 2>&1; then
+  echo "FAIL: guard did not match a human-owned file by absolute-path suffix" >&2; fail=1
+fi
+if "$CLI" guard src/app.py >/dev/null 2>&1; then :; else
+  echo "FAIL: guard blocked an ordinary editable file" >&2; fail=1
+fi
+unset LEITWERK_TIERS
+
+# 3. The scaffolded review workflow must match this repo's own copy, so an
+#    adopter running `leitwerk init` gets the same (advisory) orchestration this
+#    repo dogfoods — the workflow is not plugin-packaged, so this is its only
+#    guard against silent divergence.
+if ! diff -q core/templates/workflows/leitwerk-review.mjs .claude/workflows/leitwerk-review.mjs >/dev/null 2>&1; then
+  echo "FAIL: review workflow template and .claude/workflows/ copy diverged" >&2; fail=1
+fi
+
+# 4. The gate runs green on the bundled example (proves end-to-end execution).
 if ( cd examples/reference-app && "$CLI" verify --tier T0 >/dev/null 2>&1 ); then
   :
 else

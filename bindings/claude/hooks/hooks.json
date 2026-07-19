@@ -1,5 +1,18 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "leitwerk-hook-guard",
+            "statusMessage": "Checking the target is not a human-owned file...",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

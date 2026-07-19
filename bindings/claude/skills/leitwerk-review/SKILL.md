@@ -18,11 +18,22 @@ allowed-tools: "Read Grep Glob Bash"
 3. **Spec fidelity** — read the spec and confirm the behaviour it promises is
    what the code does. Run `leitwerk drift` and reconcile anything it surfaces
    (or escalate the reconciliation decision to a human).
-4. **Wake reviewers by signal, not ritual:**
-   - always: `test-engineer` confirms the oracle actually exercises the change.
-   - auth / data / external input / infra: `security-reviewer`.
-   - user-visible surface: report what a human should eyeball (the one review a
-     human still owns).
+4. **Run the review at the right weight for the tier:**
+   - **T2 (or any large/multi-file change):** run the adversarial panel over the
+     role subagents (`test-engineer`, `security-reviewer`, `architect`),
+     independently refuting each finding. Prefer the saved `/leitwerk-review`
+     workflow — `leitwerk init` scaffolds it into `.claude/workflows/`. If it is
+     absent, or dynamic workflows are disabled, spawn the roles directly and
+     sequentially instead; the panel is advisory, so the verdict is the same,
+     only slower. This is *soft* verification (agents judging agents).
+   - **T0/T1:** skip the panel; spawn only the roles the change warrants
+     (`test-engineer` when behaviour changed; `security-reviewer` for
+     auth/data/input) directly.
+   - **Always:** the review is advisory. The authoritative word is the external
+     gate in step 2 and the Stop hook — a red `leitwerk verify` blocks the change
+     no matter how the panel voted.
+   - **User-visible surface:** report what a human should eyeball (the one review
+     a human still owns).
 5. Summarize for the human reviewer: tier, gate result, roles run and verdicts,
    any drift surfaced, and what specifically needs human eyes. Provenance-tag
    claims as CONFIRMED (checked) vs INFERRED (reasoned) vs GAP (unverified).

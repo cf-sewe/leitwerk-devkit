@@ -18,10 +18,15 @@ allowed-tools: "Read Grep Glob Bash Write Edit"
 4. Run the gate at the step's tier: `leitwerk verify --tier <T0|T1|T2>`.
    Iterate until green. The gate is deterministic — do not argue with a red
    result, fix the cause.
-5. **Wake the roles the tier requires:**
+5. **Review at the tier's weight:**
    - T1+: spawn the `test-engineer` if the golden suite changed.
-   - T2: spawn `security-reviewer` (auth/data/infra) and, for hot paths, a
-     performance check. Delegate via the `orchestrator` when several roles apply.
+   - T2 (or several roles apply): run the review panel — prefer the saved
+     `/leitwerk-review` workflow (`leitwerk init` scaffolds it into
+     `.claude/workflows/`) so the roles review in parallel and findings are
+     adversarially refuted. If it is absent or dynamic workflows are disabled,
+     spawn the roles directly instead. The workflow script is the orchestrator,
+     so there is no orchestrator role; the panel is advisory and the gate in
+     step 4 is what blocks.
 6. If implementing revealed the spec was wrong or incomplete, update the spec
    now (bidirectional refinement). If code and spec conflict irreconcilably,
    stop and surface the drift to a human — do not pick a winner silently.

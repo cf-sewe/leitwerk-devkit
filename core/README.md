@@ -39,5 +39,13 @@ one here.
 
 ## `templates/`
 
-`constitution.md`, `spec.template.md`, `plan.template.md` — copied into a target
-repo by `leitwerk init` and the phase skills.
+Starting scaffolds, kept single-source here. `leitwerk init` instantiates the
+ones a repo owns: `constitution.template.md` → `leitwerk/constitution.md`,
+`CLAUDE.template.md` → `CLAUDE.md`, `rules/tier-discipline.md` → `.claude/rules/`,
+and `workflows/leitwerk-review.mjs` → `.claude/workflows/` (the review workflow,
+which a plugin cannot package). The `spec.template.md` and `plan.template.md` are
+referenced in place by the phase skills each time a spec or plan is written.
+
+`workflows/leitwerk-review.mjs` is advisory orchestration, so per-repo copies may
+be tailored; the repo keeps its own copy identical to this template, enforced by
+`selftest`.

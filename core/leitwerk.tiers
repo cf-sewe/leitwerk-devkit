@@ -14,6 +14,15 @@ T0 = lint
 T1 = lint types tests drift
 T2 = lint types tests drift sast erosion
 
+# Human-owned files: an agent may propose changes but may not edit them. A
+# binding (e.g. a Claude PreToolUse hook) blocks the edit via `leitwerk guard`;
+# open-code relies on human review of these paths. These are the files whose
+# change alters the framework's own guarantees.
+[human-owned]
+leitwerk/constitution.md
+leitwerk/tiers.conf
+leitwerk/roadmap.md
+
 [paths]
 # glob = tier   (first match wins; put the most specific rules first)
 docs/**          = T0

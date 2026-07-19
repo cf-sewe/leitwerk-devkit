@@ -11,6 +11,7 @@
 # Subcommands:
 #   verify [--tier T0|T1|T2]   Run the checks selected for a blast-radius tier.
 #   tier <path>                Print the blast-radius tier for a changed path.
+#   guard <path>               Exit non-zero if a path is human-owned (see below).
 #   drift                      Surface spec<->code divergence (does not resolve it).
 #   init [dir]                 Scaffold leitwerk/ (constitution, tiers) into a repo.
 #   version
@@ -68,6 +69,36 @@ tier_for_path() {
   ' "$TIERS_FILE"
 }
 
+# Report whether a path is human-owned (constitution, tier policy, roadmap, …).
+# The list lives in the tiers file under [human-owned]; it is itself human-owned
+# and tool-agnostic. A binding (e.g. a Claude PreToolUse hook) calls this and
+# blocks the edit; open-code relies on human review of the same paths. Matching
+# is on the path suffix so an absolute path from a hook payload still resolves.
+# Exit 0 = editable, 3 = human-owned (blocked).
+guard_path() {
+  local path="$1" hit
+  hit="$(awk -v p="$path" '
+    /^\[human-owned\]/ {sec="ho"; next}
+    /^\[/              {sec=""; next}
+    sec=="ho" && NF && $1 !~ /^#/ {
+      glob=$1
+      gsub(/\./,"\\.",glob)
+      gsub(/\*\*\//,"DBLSLASH",glob)   # **/  -> optional leading segments
+      gsub(/\*\*/,"DBLSTAR",glob)      # **   -> anything
+      gsub(/\*/,"[^/]*",glob)          # *    -> one path segment
+      gsub(/DBLSLASH/,"(.*/)?",glob)
+      gsub(/DBLSTAR/,".*",glob)
+      if (p ~ "(^|/)" glob "$") { print $1; exit }
+    }
+  ' "$TIERS_FILE")"
+  if [ -n "$hit" ]; then
+    echo "leitwerk: '$path' is human-owned ($hit)." >&2
+    echo "          An agent may propose changes but may not edit it. See leitwerk/constitution.md." >&2
+    return 3
+  fi
+  return 0
+}
+
 run_verify() {
   local tier="T1"
   while [ $# -gt 0 ]; do
@@ -117,11 +148,23 @@ case "${1:-}" in
   verify) shift; run_verify "$@" ;;
   tier)   shift; [ $# -ge 1 ] || die "usage: leitwerk tier <path>"
           t="$(tier_for_path "$1")"; echo "${t:-T1}" ;;
+  guard)  shift; [ $# -ge 1 ] || die "usage: leitwerk guard <path>"
+          guard_path "$1" ;;
   drift)  shift; exec "$CHECKS_DIR/drift.sh" ;;
   init)   shift; dir="${1:-.}"; mkdir -p "$dir/leitwerk"
-          cp "$SELF/templates/constitution.md" "$dir/leitwerk/constitution.md"
+          cp "$SELF/templates/constitution.template.md" "$dir/leitwerk/constitution.md"
           cp "$SELF/leitwerk.tiers" "$dir/leitwerk/tiers.conf"
-          echo "scaffolded $dir/leitwerk/ (constitution.md, tiers.conf)" ;;
+          # Claude Code steering files (rules and CLAUDE.md are repo-level, not
+          # plugin-packageable) — scaffold them so a Claude session is steered
+          # consistently with the gate from the first turn.
+          [ -f "$dir/CLAUDE.md" ] || cp "$SELF/templates/CLAUDE.template.md" "$dir/CLAUDE.md"
+          mkdir -p "$dir/.claude/rules"
+          [ -f "$dir/.claude/rules/tier-discipline.md" ] || cp "$SELF/templates/rules/tier-discipline.md" "$dir/.claude/rules/tier-discipline.md"
+          # The review workflow is a Claude Code primitive a plugin cannot carry,
+          # so scaffold it too (advisory orchestration; tailor per repo).
+          mkdir -p "$dir/.claude/workflows"
+          [ -f "$dir/.claude/workflows/leitwerk-review.mjs" ] || cp "$SELF/templates/workflows/leitwerk-review.mjs" "$dir/.claude/workflows/leitwerk-review.mjs"
+          echo "scaffolded $dir/: leitwerk/{constitution.md,tiers.conf}, CLAUDE.md, .claude/rules/tier-discipline.md, .claude/workflows/leitwerk-review.mjs" ;;
   version|--version|-v) echo "leitwerk $LEITWERK_VERSION" ;;
   ""|help|--help|-h)
     sed -n '3,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;

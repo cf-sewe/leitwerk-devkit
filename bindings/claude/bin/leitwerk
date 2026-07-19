@@ -3,10 +3,14 @@
 # skills and hooks can call `leitwerk` by name. This shim locates the real
 # tool-agnostic core CLI (bindings never reimplement the gate).
 #
+# A marketplace install sparse-copies ONLY this plugin dir, so core/ is NOT next
+# to it — an adopter must supply core via LEITWERK_HOME or the npm package. The
+# relative paths below resolve only in a full-repo checkout (development).
+#
 # Resolution order:
-#   1. $LEITWERK_HOME/bin/leitwerk         (explicit install)
-#   2. core/ in the same checkout          (whole-repo clone / dev)
-#   3. a vendored core/ next to the plugin (git-subdir install may vendor it)
+#   1. $LEITWERK_HOME/bin/leitwerk         (explicit install — the adopter path)
+#   2. core/ in the same checkout          (full-repo clone / dev only)
+#   3. a vendored core/ next to the plugin (only if one was deliberately copied)
 #   4. a globally installed CLI            (npm i -g @cf-sewe/leitwerk)
 set -euo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -4,9 +4,19 @@
 # is correct before the first commit. Exit 0 = clean, 1 = finding, 2 = no scripts.
 set -euo pipefail
 
+# Collect every shell script: all *.sh, plus extensionless scripts (CLI
+# launchers, hook wrappers) detected by shebang — so a new one is never silently
+# skipped, which would let the gate report clean without checking it.
 mapfile -t scripts < <(
-  find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './.git/*'
-  for f in core/bin/leitwerk bindings/claude/bin/leitwerk; do [ -f "$f" ] && echo "./$f"; done
+  {
+    find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './.git/*'
+    while IFS= read -r f; do
+      IFS= read -r first < "$f" 2>/dev/null || continue
+      case "$first" in
+        '#!'*bash*|'#!'*/sh|'#!'*' sh') echo "$f" ;;
+      esac
+    done < <(find . -type f ! -name '*.sh' -not -path './node_modules/*' -not -path './.git/*')
+  } | sort -u
 )
 
 [ "${#scripts[@]}" -gt 0 ] || { echo "no shell scripts found"; exit 2; }
