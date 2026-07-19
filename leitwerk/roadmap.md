@@ -119,6 +119,32 @@ check for (e.g. no GAP left on a T2 change without a human sign-off).
 drive one change under an open-code agent and confirm the CI gate is the binding
 constraint.
 
+**M3.5 · monorepo-affected-scope** · tier **T2** (`core/bin/leitwerk` + checks) ·
+*proposed (agent-suggested, needs human priority)*
+- *Problem:* the gate is diff-aware only for **tier selection**; the checks
+  themselves run project-wide (`go test ./...`, `tsc`, …). On a monorepo that
+  re-validates untouched code on every change — slow, and it blurs which package
+  a red result belongs to. But naive "validate only touched files" is unsafe: a
+  change to a shared package can break an untouched **dependent**.
+- *Behaviour:* the gate validates the **affected set** — changed files plus their
+  reverse-dependencies — not the whole repo and not only the literally-touched
+  files. The affected set is computed deterministically from the diff plus a
+  dependency graph and passed to the checks (e.g. a `$LEITWERK_CHANGED` set the
+  check scripts scope themselves to). Package boundaries and per-package checks
+  are human-owned policy, expressed with the existing repo-local `leitwerk/`
+  override (a per-package `tiers.conf` / `checks/`). The agent may not narrow its
+  own scope — scoping is part of the gate, not agent judgment.
+- *Safety:* scoping trades completeness for speed, so pair a **scoped per-change
+  gate** (fast, pre-merge) with a **periodic unscoped full gate** (nightly / on
+  the protected branch) that catches what a stale graph or wrong exclusion missed.
+  A T2 change may widen the scope.
+- *Acceptance:* on a two-package monorepo fixture, editing package A runs A's
+  checks (and B's iff B depends on A) and skips unrelated package C; a
+  deliberately broken dependent still turns the gate red; the full nightly gate
+  runs everything.
+- *Roles/skills:* `architect` (affected-set model + boundary policy),
+  `test-engineer` (fixture + `selftest` cases for scope correctness).
+
 ## Recently decided (done)
 - **Aligned with Claude Code steering guidance.** Turned prose prohibitions into
   mechanism: `leitwerk guard` (core) + a `PreToolUse` hook block edits to
