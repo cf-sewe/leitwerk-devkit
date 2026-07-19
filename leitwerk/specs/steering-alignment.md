@@ -1,5 +1,7 @@
 # Spec — align Leitwerk with Claude Code steering primitives
 
+Status: landed (2026-07-19) <!-- durable content: constitution decision of record -->
+
 **Tier:** T2 (changes the core CLI and shell scripts).
 
 ## Problem
@@ -60,7 +62,8 @@ stated a rule as prose that the guidance says should be mechanical:
   message; `leitwerk guard src/app.py` exits 0. Covered by `selftest`.
 - The `PreToolUse` hook blocks a Write/Edit to a human-owned file and allows
   others. (Verified by the binding; asserted mechanically at the CLI layer.)
-- `leitwerk verify --tier T2` stays green (json/shell/drift/selftest/parity).
+- `leitwerk verify --tier T2` stays green (json/shell/drift/selftest/parity, as
+  of landing; the `context` check was wired at every tier by a later change).
 
 ## Roles
 `architect` (CLI surface + boundary), `test-engineer` (extend `selftest`),

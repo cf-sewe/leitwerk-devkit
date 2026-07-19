@@ -37,3 +37,7 @@ allowed-tools: "Read Grep Glob Bash"
 5. Summarize for the human reviewer: tier, gate result, roles run and verdicts,
    any drift surfaced, and what specifically needs human eyes. Provenance-tag
    claims as CONFIRMED (checked) vs INFERRED (reasoned) vs GAP (unverified).
+6. **Lifecycle** — when the change lands, set the spec's `Status:` line
+   (`landed YYYY-MM-DD`). A finished plan and a superseded spec move to
+   `leitwerk/specs/archive/`; only `active` specs are current contract, and
+   keeping that set small keeps agent context relevant on a long-lived repo.

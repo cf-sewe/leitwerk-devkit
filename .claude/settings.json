@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR/core/bin/leitwerk\" verify --tier ${LEITWERK_TIER:-T2} || exit 2",
+            "command": "[ -x \"$CLAUDE_PROJECT_DIR/core/bin/leitwerk\" ] || { echo 'leitwerk: gate binary not built — run: make -C core build' >&2; exit 2; }; \"$CLAUDE_PROJECT_DIR/core/bin/leitwerk\" verify --tier ${LEITWERK_TIER:-T2} || exit 2",
             "statusMessage": "Running the leitwerk gate on the repo itself...",
             "timeout": 600
           }

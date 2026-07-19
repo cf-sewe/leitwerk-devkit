@@ -1,5 +1,7 @@
 # Spec — Layer-2 orchestration via native dynamic workflows
 
+Status: landed (2026-07-19) <!-- durable content: constitution decision of record -->
+
 ## Problem
 Leitwerk's Layer 2 (roles / orchestration / review) was designed as a
 hand-rolled `orchestrator` subagent plus a prose "trigger table" that wakes

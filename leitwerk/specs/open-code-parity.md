@@ -1,5 +1,7 @@
 # Spec — open-code guarantee-parity guard
 
+Status: landed (2026-07-19) <!-- durable content: constitution invariant + parity check -->
+
 ## Problem
 Open-code compatibility is an architectural property, not a feature: it holds as
 long as the hard guarantee lives in `core/` and is reachable via `leitwerk verify`

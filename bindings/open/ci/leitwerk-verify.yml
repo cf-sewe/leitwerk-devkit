@@ -16,8 +16,15 @@ jobs:
         with:
           fetch-depth: 0   # tier selection needs the diff base
 
+      # The gate is a single static Go binary. `go install` builds it from source
+      # (the binary embeds its checks/templates, so it needs no repo layout). Pin a
+      # tag instead of @latest once you depend on it; or download a prebuilt release
+      # binary onto PATH instead of these two steps.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
       - name: Install leitwerk
-        run: npm install -g @cf-sewe/leitwerk
+        run: go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest
 
       - name: Select tier from changed paths
         id: tier

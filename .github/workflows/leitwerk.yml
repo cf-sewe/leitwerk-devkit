@@ -1,7 +1,7 @@
 # Leitwerk gates its own development. Unlike a consuming repo (which installs the
-# published CLI), this repo uses its in-tree core/bin so the gate tests the code
-# in the PR — not a previously published version. "leitwerk gate" is a required
-# check on the protected branch.
+# published CLI), this repo builds its in-tree core/ from source so the gate tests
+# the code in the PR — not a previously published version. "leitwerk gate" is a
+# required check on the protected branch.
 name: leitwerk gate
 on:
   pull_request:
@@ -19,10 +19,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
 
       - name: shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Build the gate binary
+        run: make -C core build
 
       - name: Put in-tree CLI on PATH
         run: echo "$PWD/core/bin" >> "$GITHUB_PATH"
@@ -46,12 +53,20 @@ jobs:
 
   parity:
     # Proves open-code guarantee-parity: the core gate runs with NO agent runtime
-    # (no Claude Code, no plugin) and deliberately without extra toolchain setup.
-    # If this is green, an open-code adopter gets the same hard guarantee.
+    # (no Claude Code, no plugin). Go is the gate's own build toolchain, not an
+    # agent runtime, so it is set up; but the OPTIONAL check analyzers (shellcheck,
+    # semgrep) are deliberately left out — their absence must make those checks
+    # skip cleanly, never fake a pass. If this is green, an open-code adopter gets
+    # the same hard guarantee.
     name: open-code parity (no agent runtime)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+      - name: Build the gate binary
+        run: make -C core build
       - name: Put in-tree CLI on PATH
         run: echo "$PWD/core/bin" >> "$GITHUB_PATH"
       - name: Boundary + core gate, shell-only

@@ -1,0 +1,8 @@
+# Toolchain for leitwerk-devkit, managed by mise (https://mise.jdx.dev).
+#
+# The gate (core/) is a compiled Go binary, so Go is required to build it. Node
+# is used by the `json` check's validator and by Claude Code tooling. Pin here so
+# a fresh checkout and CI resolve the same toolchain without asdf.
+[tools]
+go = "1.26.5"
+node = "24.18.0"

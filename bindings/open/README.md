@@ -11,8 +11,8 @@ Aider, Zed, Jules, and others.
 - **`.codex/config.toml`** — Codex config: instruction fallbacks and a raised
   doc-size budget so the constitution + specs are not truncated.
 - **`.codex/agents/*.toml`** — the specialist roles as Codex custom agents
-  (`architect`, `test-engineer`, `security-reviewer`). Other tools apply the same
-  roles as review lenses.
+  (`architect`, `test-engineer`, `security-reviewer`, `scout`). Other tools apply
+  the same roles as review lenses.
 - **`ci/leitwerk-verify.yml`** — the authoritative gate as a GitHub Actions
   workflow. This is the enforcement point for open code: there is no universal
   hook, so CI runs `leitwerk verify` as a required status check and a red gate

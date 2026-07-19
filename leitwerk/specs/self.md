@@ -1,5 +1,7 @@
 # Spec — leitwerk-devkit governs itself
 
+Status: active <!-- the repo's living governance contract, not a change record -->
+
 ## Problem
 The framework claims changes should be spec-anchored and verification-gated. If
 its own repository is not, the claim is unproven and the whitepaper reads as
@@ -9,10 +11,14 @@ generic. This spec anchors the repository to its own gate.
 - `leitwerk verify` runs from the repo root using `leitwerk/tiers.conf` and the
   repo-local checks in `leitwerk/checks/`, falling back to built-in `core/checks/`
   per check.
-- Changing a `core/bin`, `core/checks`, or any `*.sh` path selects tier **T2**.
+- Changing a `core/bin`, `core/checks`, `core/cmd`, `core/internal` (or other Go
+  source), or any `*.sh` path selects tier **T2**.
 - A T2 gate runs: `json` (all manifests parse), `shell` (`bash -n` + shellcheck
-  when present), `drift` (specs tracked), `selftest` (CLI tier mapping + a green
-  gate on the reference app).
+  when present), `drift` (specs tracked), `selftest` (builds the Go CLI, runs its
+  unit + integration tests, re-asserts the external contract, and executes the
+  documented scenarios in `examples/scenarios/`), `parity` (the guarantee stays
+  in `core/`, stdlib-only; bindings delegate), `context` (always-on steering
+  files stay within the constitution's context budgets).
 - The gate is green on a clean tree; a real defect (invalid JSON, shell syntax
   error, or a broken tier boundary) turns it red.
 
@@ -31,5 +37,5 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
 and authoritatively by `.github/workflows/leitwerk.yml`.
 
 ## Out of scope
-Wiring language-specific checks (there is no application code here yet) and
-publishing the npm package.
+Wiring language-specific checks beyond the Go toolchain the gate itself needs,
+and publishing the CLI (`go install` path / prebuilt binaries — roadmap M2.1).

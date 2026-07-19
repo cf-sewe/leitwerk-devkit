@@ -2,3 +2,7 @@ node_modules/
 *.log
 .DS_Store
 core/node_modules/
+
+# The gate binary is a build artifact (platform-specific); build it with
+# `make -C core build`. CI builds it before running the gate.
+core/bin/leitwerk

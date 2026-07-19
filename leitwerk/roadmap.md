@@ -69,19 +69,35 @@ before making it broadly adoptable.
   optional segment, catch-all), `leitwerk init` output, and non-zero exit paths.
 - *Acceptance:* mutating the glob translation or the tier table fails `selftest`.
 
+**M1.4 · spec-lifecycle** · tier **T0/T1**
+- *Problem:* specs and plans accumulate monotonically and change records read as
+  if current. `Status:` lines and the archive convention exist (templates,
+  `leitwerk-review` step 6), but no tooling knows about them.
+- *Behaviour:* `leitwerk/specs/archive/` is recognized: `drift` (M1.1) ignores
+  archived specs; a grooming ("dreaming") pass — part of review at landing plus
+  a periodic sweep — merges landed change-specs into living specs / decisions of
+  record and moves them to the archive.
+- *Acceptance:* an archived spec no longer counts as active anywhere; a landed
+  but unarchived plan is flagged.
+- *Roles/skills:* `leitwerk-review` (landing step), `architect` (what counts as
+  durable content).
+
 ### Milestone 2 — make it adoptable
 
 **M2.1 · cli-publish** · tier **T1**
-- *Problem:* CI and `bindings/open` reference `npm i -g @cf-sewe/leitwerk`, which
-  does not exist; only the in-repo path works. Confirmed constraint: a Claude Code
-  marketplace install sparse-copies **only** the plugin subdir, so the plugin's
-  launcher cannot reach a sibling `core/` — an adopter must set `LEITWERK_HOME`
-  until the package exists. This makes publishing the real unblock for a
-  marketplace-only adoption, not a nicety.
-- *Behaviour:* publish `core/` as the `@cf-sewe/leitwerk` package (or document a
-  vendoring path) so adopters and CI do not depend on the repo layout.
-- *Acceptance:* a clean machine can `npm i -g @cf-sewe/leitwerk` and run
-  `leitwerk verify` in an unrelated repo.
+- *Problem:* the gate is distributed only as source; adopters and CI build it
+  via `go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest`,
+  which resolves only once the repository is public. Confirmed constraint: a
+  Claude Code marketplace install sparse-copies **only** the plugin subdir, so
+  the plugin's launcher cannot reach a sibling `core/` — an adopter must set
+  `LEITWERK_HOME` or have a globally installed binary until publication. That
+  makes publishing the real unblock for a marketplace-only adoption, not a
+  nicety.
+- *Behaviour:* make the module path publicly resolvable (`go install …@latest`
+  works from a clean machine) and/or attach prebuilt static binaries to
+  releases; document vendoring as the third path.
+- *Acceptance:* a clean machine can obtain the binary (go install or release
+  download) and run `leitwerk verify` in an unrelated repo.
 
 **M2.2 · plugin-live-validation** · process (no tier — validation, not a code change)
 - *Problem:* the plugin, skills, agents, and the review **workflow** are written
@@ -100,6 +116,19 @@ before making it broadly adoptable.
 - *Behaviour:* push to `cf-sewe`, run the gate as a required check on a PR, and
   confirm tier selection from the diff works on GitHub's runner.
 - *Acceptance:* a PR with a T2 change is blocked until the gate is green.
+
+**M2.4 · verify --auto** · tier **T2**
+- *Problem:* the Stop hook verifies at a static tier (`$LEITWERK_TIER`, plugin
+  default T1; this repo pins T2) — it cannot see the change's real blast
+  radius. A T2 change can end a turn having passed only T1 locally; a docs-only
+  turn overpays. Only CI derives the tier from the diff.
+- *Behaviour:* `leitwerk verify --auto` computes the highest tier from the git
+  diff (same first-match rule CI uses) and runs that tier; the hook templates
+  and CI share it. Optional later extension: diff-signal triggers (auth paths →
+  security review) once the tier derivation is proven.
+- *Acceptance:* `selftest` covers tier derivation from a mixed diff (docs-only →
+  T0, one migration → T2); the scaffolded hook uses `--auto`.
+- *Roles/skills:* `architect` (diff-base semantics), `test-engineer`.
 
 ### Milestone 3 — verification depth
 
@@ -144,6 +173,31 @@ constraint.
   runs everything.
 - *Roles/skills:* `architect` (affected-set model + boundary policy),
   `test-engineer` (fixture + `selftest` cases for scope correctness).
+
+**M3.6 · required-checks** · tier **T2**
+- *Problem:* a check that skips at T2 (e.g. `sast` when semgrep is absent)
+  leaves the gate green; "a skipped security check on a T2 change is a blocker"
+  is role prose, not mechanism.
+- *Behaviour:* `[tiers]` syntax marks checks that may not skip at a tier (e.g.
+  `T2 = … sast!`); a skip of a required check turns the gate red with a message
+  naming the missing tool.
+- *Acceptance:* scenario/`selftest` case: empty toolchain at T2 with `sast`
+  required → exit 1; with the tool installed → normal pass/fail.
+
+### Milestone 4 — measure the framework itself
+
+**M4.1 · efficiency-evaluation** · process (periodic, not per-change)
+- *Problem:* deterministic proxies are gated (the `context` budget check), but
+  outcome efficiency — tokens-to-green-gate, wall time to a landed change,
+  human interventions per change — is unmeasured, and no off-the-shelf
+  benchmark measures a governance framework's overhead.
+- *Behaviour:* an A/B harness: a fixed task set (the runnable scenarios in
+  `examples/scenarios/` plus reference-app changes) driven with and without
+  Leitwerk, several runs per task, reporting cost and outcome distributions.
+  Candidate substrates: long-horizon suites (SWE-bench-Pro-class) and
+  terminal-agent suites (Terminal-Bench-class) with cost reporting.
+- *Acceptance:* a first dated report in `docs/reviews/` comparing the two arms
+  on cost and outcome.
 
 ## Recently decided (done)
 - **Aligned with Claude Code steering guidance.** Turned prose prohibitions into

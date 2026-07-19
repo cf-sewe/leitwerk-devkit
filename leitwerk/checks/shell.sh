@@ -6,7 +6,9 @@ set -euo pipefail
 
 # Collect every shell script: all *.sh, plus extensionless scripts (CLI
 # launchers, hook wrappers) detected by shebang — so a new one is never silently
-# skipped, which would let the gate report clean without checking it.
+# skipped, which would let the gate report clean without checking it. The compiled
+# gate binary (core/bin/leitwerk) is a build artifact, not a script, so it is
+# excluded from the shebang scan; the checks it orchestrates are still Bash.
 mapfile -t scripts < <(
   {
     find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './.git/*'
@@ -15,7 +17,7 @@ mapfile -t scripts < <(
       case "$first" in
         '#!'*bash*|'#!'*/sh|'#!'*' sh') echo "$f" ;;
       esac
-    done < <(find . -type f ! -name '*.sh' -not -path './node_modules/*' -not -path './.git/*')
+    done < <(find . -type f ! -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -not -path './core/bin/leitwerk')
   } | sort -u
 )
 

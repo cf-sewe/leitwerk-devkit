@@ -1,8 +1,27 @@
 #!/usr/bin/env bash
 # Repo check: the golden behaviour of the CLI itself — the executable oracle the
-# whole framework rests on. If tier selection or the gate regresses, this fails.
-# Exit 0 = behaviour intact, 1 = a regression.
+# whole framework rests on. The CLI is now a compiled Go binary, so this check
+# (1) builds it from source, (2) runs its Go unit + integration tests, and
+# (3) re-asserts the external contract against the built binary. If tier selection,
+# the guard, or the gate regresses, this fails. Exit 0 = intact, 1 = a regression.
 set -euo pipefail
+
+# Resolve a `go` command. Prefer mise (the repo's declared toolchain manager, per
+# mise.toml) so we get the pinned Go and never a stale shim from another version
+# manager on PATH. CI has no mise (it uses setup-go), so fall back to a bare `go`.
+if command -v mise >/dev/null 2>&1; then
+  GO=(mise exec -- go)
+elif command -v go >/dev/null 2>&1; then
+  GO=(go)
+else
+  echo "go toolchain not found (install it; the repo pins it in mise.toml)" >&2
+  exit 1
+fi
+
+# 0. Build the gate from source and run its own tests, so the assertions below run
+#    against the current source, not a stale binary.
+CGO_ENABLED=0 "${GO[@]}" build -C core -o bin/leitwerk ./cmd/leitwerk
+CGO_ENABLED=0 "${GO[@]}" test -C core ./...
 
 CLI="$PWD/core/bin/leitwerk"
 [ -x "$CLI" ] || { echo "CLI not found at $CLI" >&2; exit 1; }
@@ -51,5 +70,12 @@ else
   echo "FAIL: gate not green on reference-app" >&2; fail=1
 fi
 
-[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (tiers + gate)"
+# 5. The documented scenarios hold (examples/scenarios/ are executable
+#    documentation of the guarantees; a regression turns this check red).
+if ! scen_out="$(examples/scenarios/run-all.sh "$CLI" 2>&1)"; then
+  echo "$scen_out" >&2
+  echo "FAIL: a documented scenario regressed (examples/scenarios/)" >&2; fail=1
+fi
+
+[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios)"
 exit "$fail"

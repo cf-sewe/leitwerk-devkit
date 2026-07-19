@@ -9,8 +9,12 @@ set -euo pipefail
 fail=0
 note() { echo "PARITY VIOLATION: $*" >&2; fail=1; }
 
-# R1: core/ must not depend on any binding (core is tool-agnostic).
-if grep -rnI 'bindings/' core/bin core/checks core/templates core/leitwerk.tiers 2>/dev/null; then
+# R1: core/ must not depend on any binding (core is tool-agnostic). This covers
+# the Go gate source (cmd/, internal/, assets.go, go.mod) as well as the checks,
+# templates, and default tiers; grep -I skips the compiled binary under core/bin.
+if grep -rnI 'bindings/' \
+    core/bin core/checks core/templates core/leitwerk.tiers \
+    core/cmd core/internal core/assets.go core/go.mod 2>/dev/null; then
   note "core/ references bindings/ — the gate must not depend on a binding"
 fi
 
@@ -23,16 +27,35 @@ if find bindings -type f \( -name '*.tiers' -o -name 'tiers.conf' \) 2>/dev/null
   note "a tiers file exists under bindings/ — tier policy is not a binding's job"
 fi
 
-# R3: a binding launcher may only resolve and exec core, never reimplement the gate.
+# R3: a binding must not reimplement the gate in ANY language — no tier/check/glob
+# logic and no parsing of the tiers policy file. Scan every binding bin/ file for
+# gate-logic signals: the old Bash function names, the Go gate API, and references
+# to the tiers file / its section headers. (The launcher and hook-guard delegate
+# via the core CLI, so they carry none of these.)
+reimpl='run_verify|checks_for_tier|tier_for_path|ChecksForTier|TierForPath|RunVerify|GlobToRegex|ParseTiers|leitwerk\.tiers|tiers\.conf|\[tiers\]|\[paths\]'
+for f in bindings/*/bin/*; do
+  [ -f "$f" ] || continue
+  if grep -qE "$reimpl" "$f"; then
+    note "$f contains gate logic — a binding must delegate to core, not reimplement it"
+  fi
+done
+# The main launcher (named leitwerk) must additionally resolve+exec core.
 for launcher in bindings/*/bin/leitwerk; do
   [ -f "$launcher" ] || continue
-  if grep -qE 'run_verify|checks_for_tier|tier_for_path|leitwerk\.tiers' "$launcher"; then
-    note "$launcher reimplements gate logic — it must only delegate to core"
-  fi
   if ! grep -qE 'exec |LEITWERK_HOME|core/bin/leitwerk' "$launcher"; then
     note "$launcher does not delegate to core (no exec of the core CLI found)"
   fi
 done
 
-[ "$fail" -eq 0 ] && echo "parity boundary intact (guarantee in core/, bindings delegate)"
+# R4: the Go gate must stay standard-library-only, so no agent SDK or other runtime
+# dependency can creep into core/ (the "core never depends on an agent runtime"
+# invariant, enforced structurally rather than only by grepping for 'bindings/').
+if [ -f core/go.mod ] && grep -qE '^[[:space:]]*require([[:space:]]|\()' core/go.mod; then
+  note "core/go.mod has a require directive — the gate must stay standard-library-only"
+fi
+if [ -f core/go.sum ]; then
+  note "core/go.sum exists — the gate must have zero third-party dependencies"
+fi
+
+[ "$fail" -eq 0 ] && echo "parity boundary intact (guarantee in core/, stdlib-only, bindings delegate)"
 exit "$fail"

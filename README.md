@@ -76,12 +76,13 @@ tools. The gate is a plain CLI on purpose (see "Why a CLI", below).
 ```
 leitwerk-devkit/
 ├── core/                    # TOOL-AGNOSTIC. The gate itself — runs with only a shell.
-│   ├── bin/leitwerk          #   the CLI: verify · tier · guard · drift · init
+│   ├── bin/leitwerk          #   the compiled CLI (Go): verify · tier · guard · drift · init
+│   ├── cmd/ · internal/      #   Go source: entrypoint + the unit-tested gate library
 │   ├── checks/               #   one script per check (lint, types, tests, sast, drift, erosion)
 │   ├── leitwerk.tiers        #   default policy: tiers→checks, paths→tiers, and [human-owned] files
 │   ├── templates/            #   what `init` drops into a repo: constitution, spec, plan,
 │   │                         #     CLAUDE.md, .claude/rules/, .claude/workflows/ — pieces a plugin can't carry
-│   └── package.json          #   publishes the CLI as @cf-sewe/leitwerk
+│   └── assets.go · Makefile  #   embed checks+templates into the binary; `make build`
 │
 ├── bindings/                # thin per-tool adapters — they INVOKE core, never reimplement it
 │   ├── claude/               #   Claude Code plugin: skills, role agents, bin/ (launcher + guard),
@@ -93,7 +94,7 @@ leitwerk-devkit/
 │
 │  # ── the devkit governing itself (dogfooding) — not shipped to adopters ──
 ├── leitwerk/                # THIS repo's own governance: constitution, tiers, specs, roadmap,
-│                            #   and repo-local checks (json, shell, selftest, parity)
+│                            #   and repo-local checks (json, shell, selftest, parity, context)
 ├── .claude/                 # THIS repo's Claude config: settings (hooks), rules, review workflow
 ├── .github/workflows/       # THIS repo's CI — the gate gating its own development
 └── .claude-plugin/          # marketplace.json — this repo is also a Claude Code marketplace
@@ -145,6 +146,7 @@ and the skills/hooks/CI are just three ways of calling and enforcing it.
 Run the gate against the bundled example:
 
 ```bash
+make -C core build            # build the gate binary (Go toolchain pinned in mise.toml)
 export PATH="$PWD/core/bin:$PATH"
 cd examples/reference-app
 leitwerk verify --tier T0     # -> gate: PASS
@@ -158,13 +160,18 @@ version.)
 
 ### 1 · Make the gate available — required
 
-The gate is the core CLI. Until it is published to npm, make it resolvable:
+The gate is a single static Go binary. Get it one of these ways:
 
 ```bash
-# clone this repo once, then point at its core/
-export LEITWERK_HOME="/path/to/leitwerk-devkit/core"
-export PATH="$LEITWERK_HOME/bin:$PATH"
-# (soon) npm install -g @cf-sewe/leitwerk
+# A · build from a checkout (Go toolchain pinned in mise.toml)
+git clone https://github.com/cf-sewe/leitwerk-devkit && cd leitwerk-devkit
+make -C core build
+export LEITWERK_HOME="$PWD/core"; export PATH="$LEITWERK_HOME/bin:$PATH"
+
+# B · go install — one self-contained binary (carries its checks/templates via embed)
+go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest   # path provisional until published
+
+# C · a prebuilt release binary placed on your PATH
 ```
 
 Scaffold your repo and set your policy:
@@ -201,8 +208,8 @@ repo — which is exactly why step 1's `leitwerk init` scaffolds them:
   changes (opt-in; tailor its dimensions to your repo).
 
 Note the plugin's launcher still calls the core CLI from step 1 — a marketplace
-install copies only the plugin, not `core/`, so `LEITWERK_HOME` (or the npm
-package) must be set.
+install copies only the plugin, not `core/`, so `LEITWERK_HOME` (or a
+`go install`ed binary on PATH) must be present.
 
 ### 3 · Open code (Codex, Copilot, Cursor, Aider…) — optional
 
@@ -214,7 +221,7 @@ from step 1 is what enforces the bar.
 
 | Piece | Delivered by | Auto-active in a session? |
 |---|---|---|
-| The gate (`leitwerk verify`) | core CLI (npm / `LEITWERK_HOME`) | it *is* the guarantee |
+| The gate (`leitwerk verify`) | core CLI (`make build` / `go install` / `LEITWERK_HOME`) | it *is* the guarantee |
 | Governance: constitution, `tiers.conf` | `leitwerk init` | — (human-owned) |
 | `CLAUDE.md`, `.claude/rules/` | `leitwerk init` | yes — Claude reads them |
 | Phase skills, role agents | Claude plugin | on enable |
@@ -224,6 +231,7 @@ from step 1 is what enforces the bar.
 
 ## Status
 
-v0.1 scaffold. The gate runs and the tier logic works; most `core/checks/*` are
-auto-detecting stubs that skip cleanly until wired to a project's real toolchain.
-See `docs/` for the whitepaper and the design rationale.
+v0.1 scaffold. The gate is a compiled, unit-tested Go binary and the tier logic
+works; most `core/checks/*` are auto-detecting stubs that skip cleanly until wired
+to a project's real toolchain. See `docs/` for the whitepaper and the design
+rationale.

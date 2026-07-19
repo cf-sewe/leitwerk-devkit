@@ -26,6 +26,7 @@ const FINDINGS = {
   properties: {
     findings: {
       type: 'array',
+      maxItems: 8, // bounds the refute fan-out (one verifier agent per finding): report the most severe
       items: {
         type: 'object',
         properties: {

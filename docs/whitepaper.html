@@ -55,6 +55,9 @@
   a:hover { border-bottom-color: var(--accent); }
   strong { font-weight: 700; }
   code { font-family: var(--mono); font-size: .84em; background: var(--code-bg); padding: .1em .38em; border-radius: 4px; }
+  pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; background: var(--code-bg); color: var(--ink); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; margin: 1.3em 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  pre .c-dim { color: var(--ink-faint); } pre .c-ok { color: var(--accent); font-weight: 700; } pre .c-bad { color: var(--tier2); font-weight: 700; }
   sup.cite { font-family: var(--sans); font-size: .7em; font-weight: 700; line-height: 0; }
   sup.cite a { color: var(--accent); border: 0; }
 
@@ -190,7 +193,7 @@
 
 <div class="abstract">
   <h4>Abstract</h4>
-  <p>AI coding agents at current capability (Opus-4.8-class and above) can generate and modify code faster than humans can read it, but the empirical record is unambiguous: without structure, quality erodes. Roughly 45% of AI-generated code fails security tests<sup class="cite"><a href="#r-veracode">12</a></sup>, iterative self-refinement <em>increases</em> critical vulnerabilities<sup class="cite"><a href="#r-secdeg">13</a></sup>, code duplication rises while refactoring falls<sup class="cite"><a href="#r-gitclear">14</a></sup>, and developers systematically over-estimate their own speed-up<sup class="cite"><a href="#r-metr">21</a></sup>. The evidence also shows what works: treat the model as a cheap, fallible generator and place correctness decisions in an external gate the agent cannot weaken<sup class="cite"><a href="#r-clover">7</a></sup><sup class="cite"><a href="#r-agentless">6</a></sup>; retrieve context rather than pre-loading it<sup class="cite"><a href="#r-contextrot">17</a></sup>; and keep humans on the decisions agents demonstrably get wrong.</p>
+  <p>AI coding agents at current capability (Opus-4.8-class and above) can generate and modify code faster than humans can read it, but the empirical record indicates that without structure, quality erodes. Roughly 45% of AI-generated code fails security tests<sup class="cite"><a href="#r-veracode">12</a></sup>, iterative self-refinement <em>increases</em> critical vulnerabilities<sup class="cite"><a href="#r-secdeg">13</a></sup>, code duplication rises while refactoring falls<sup class="cite"><a href="#r-gitclear">14</a></sup>, and developers systematically over-estimate their own speed-up<sup class="cite"><a href="#r-metr">21</a></sup>. The evidence also shows what works: treat the model as a cheap, fallible generator and place correctness decisions in an external gate whose policy the agent cannot change unilaterally<sup class="cite"><a href="#r-clover">7</a></sup><sup class="cite"><a href="#r-agentless">6</a></sup>; retrieve context rather than pre-loading it<sup class="cite"><a href="#r-contextrot">17</a></sup>; and keep humans on the decisions agents demonstrably get wrong.</p>
   <p><strong>Leitwerk</strong> operationalizes these findings. It rests on three layers — durable git-versioned artifacts, an ensemble of specialized agent <em>roles</em>, and a deterministic verification gate — organized so that humans own only requirements and behavioral review while everything between is machine-enforced and tiered by blast radius. This document defines the problem, the principles, the roles and how they are invoked, capability-tiered model routing, three concrete workflows (greenfield, feature, bugfix), the gate, the human-in-the-loop model, and adoption bindings for Claude Code and open agent tooling. Leitwerk is spec-anchored rather than regenerate-only, so a human expert may still write code by hand; divergence between specification and code is surfaced for a human to reconcile rather than silently overwritten.</p>
 </div>
 
@@ -222,7 +225,7 @@
 <p class="lead">Leitwerk's goal is a rigorous, scalable process for software that is written mostly by AI and reviewed — never hand-read line-by-line — by humans. Humans contribute requirements and judge results; agents do the construction.</p>
 
 <h3>1.1 The opportunity, and why structure is required</h3>
-<p>A capable agent can now implement a feature end-to-end, and cheaper models can perform routine work — locating code, summarizing logs — at negligible cost. The temptation is to point an agent at a task and let it run. The evidence says this fails predictably at scale: security defects are common and get <em>worse</em> under iteration<sup class="cite"><a href="#r-secdeg">13</a></sup>, duplication accumulates while refactoring declines<sup class="cite"><a href="#r-gitclear">14</a></sup>, and long-running agents lose track of their own goals as context degrades<sup class="cite"><a href="#r-contextrot">17</a></sup>. The value of a framework is precisely to convert raw model capability into <em>sustained</em> quality.</p>
+<p>A capable agent can now implement a feature end-to-end, and cheaper models can perform routine work — locating code, summarizing logs — at negligible cost. The temptation is to point an agent at a task and let it run. The evidence indicates this fails at scale: security defects are common and get <em>worse</em> under iteration<sup class="cite"><a href="#r-secdeg">13</a></sup>, duplication accumulates while refactoring declines<sup class="cite"><a href="#r-gitclear">14</a></sup>, and long-running agents lose track of their own goals as context degrades<sup class="cite"><a href="#r-contextrot">17</a></sup>. The value of a framework is precisely to convert raw model capability into <em>sustained</em> quality.</p>
 
 <h3>1.2 The problem to solve</h3>
 <div class="grid">
@@ -245,20 +248,20 @@
 <p><strong>Design assumption.</strong> Leitwerk assumes agents of Opus-4.8-class capability for reasoning-heavy work — architecture, ambiguous specification, adversarial verification — and uses smaller, faster models for routine work such as locating code and summarizing (Section 6). The framework is not a model; it is the scaffolding that makes a capable model reliable and a cheap model useful.</p>
 
 <h2 id="background"><span class="num">2</span>Background &amp; evidence</h2>
-<p>Leitwerk's choices are not stylistic. Each traces to a measured result in the literature (2023–2026). The findings cluster into five themes.</p>
-<div class="note"><b>How to read this evidence.</b> Two kinds of claim appear below. <em>Model-capability snapshots</em> — failure rates, context-length thresholds, benchmark scores — are tied to the model generation tested; several were measured on GPT-4-class or early-2025 models and <strong>will drift as models improve, so they are dated in §14 and should be re-checked, not read as current</strong>. <em>Structural, methodological, and human-factors findings</em> — verification-before-acceptance, spec enforcement, characterization tests, automation bias — are largely model-independent and durable. Critically, the snapshots do not prop up the framework: because Leitwerk is defensive, better models lower the <em>frequency</em> of these failures without removing the <em>asymmetric cost</em> of the rare one, so the gates remain cheap insurance whichever way the numbers move.</div>
+<p>Each of Leitwerk's choices traces to a measured result in the literature (2023–2026). The findings cluster into five themes.</p>
+<div class="note"><b>How to read this evidence.</b> Two kinds of claim appear below. <em>Model-capability snapshots</em> — failure rates, context-length thresholds, benchmark scores — are tied to the model generation tested; several were measured on GPT-4-class or early-2025 models and <strong>will drift as models improve, so they are dated in §14 and should be re-checked, not read as current</strong>. <em>Structural, methodological, and human-factors findings</em> — verification-before-acceptance, spec enforcement, characterization tests, automation bias — are largely model-independent and durable. Critically, the snapshots do not prop up the framework: because Leitwerk is defensive, better models lower the <em>frequency</em> of these failures without removing the <em>asymmetric cost</em> of the rare one, so the gates remain relevant whichever way the numbers move. The framework's own cost is measured, not assumed (§9.4).</div>
 
 <h3>2.1 Verification is the bottleneck, not generation</h3>
-<p>The strongest systems constrain control flow and gate acceptance on an external oracle. <em>Agentless</em> — a fixed localize→repair→validate pipeline with no autonomous tool-choosing — topped the open-source SWE-bench Lite leaderboard as of mid-2024 at a fraction of the cost<sup class="cite"><a href="#r-agentless">6</a></sup>. <em>Clover</em> reduced correctness to a consistency check among code, docs, and formal annotations and, with GPT-4 on the Dafny <em>CloverBench</em>, accepted correct programs at high rate with <strong>zero false positives</strong> on incorrect ones<sup class="cite"><a href="#r-clover">7</a></sup>. <em>AlphaCodium</em>'s designed test-generate-run-fix flow more than doubled the pass rate of GPT-4 in early 2024<sup class="cite"><a href="#r-alphacodium">8</a></sup>. The specific models and rankings have since moved on; the durable lesson — <em>a designed pipeline with an external check beats open-ended self-direction</em> — is what Leitwerk builds on, and it has only strengthened as agents have grown more capable and more prone to confident error.</p>
+<p>The strongest systems constrain control flow and gate acceptance on an external oracle. <em>Agentless</em> — a fixed localize→repair→validate pipeline with no autonomous tool-choosing — topped the open-source SWE-bench Lite leaderboard as of mid-2024 at a fraction of the cost<sup class="cite"><a href="#r-agentless">6</a></sup>. <em>Clover</em> reduced correctness to a consistency check among code, docs, and formal annotations and, with GPT-4 on the Dafny <em>CloverBench</em>, accepted correct programs at high rate with <strong>zero false positives</strong> on incorrect ones<sup class="cite"><a href="#r-clover">7</a></sup>. <em>AlphaCodium</em>'s designed test-generate-run-fix flow more than doubled the pass rate of GPT-4 in early 2024<sup class="cite"><a href="#r-alphacodium">8</a></sup>. The specific models and rankings have since moved on; the durable lesson — <em>a designed pipeline with an external check beats open-ended self-direction</em> — is what Leitwerk builds on.</p>
 
 <h3>2.2 Quality erodes without gates</h3>
 <div class="evidence">
   Across 100+ models tested in 2025, ~45% of AI-generated samples failed security tests, with no improvement as models scaled<sup class="cite"><a href="#r-veracode">12</a></sup>. · Critical vulnerabilities rose <strong>+37.6% after five refinement iterations</strong> on 2025-era models<sup class="cite"><a href="#r-secdeg">13</a></sup>. · Duplicated blocks rose ~8→12% while refactoring fell from 25% to under 10% of changed lines, across 211M lines committed 2020–2024<sup class="cite"><a href="#r-gitclear">14</a></sup>. · ~1 in 5 packages an LLM suggested did not exist ("slopsquatting"), across 16 models in 2025<sup class="cite"><a href="#r-slop">15</a></sup>.
 </div>
-<p>These are 2025-era snapshots and the exact rates will fall as models improve — but that does not weaken the argument, because none of the gates that follow depend on a particular number: an external security check, a dependency allowlist, and duplication budgets stay cheap whether the failure rate is 45% or 5%, and they pay for themselves the first time they catch the rare high-cost defect. The load-bearing conclusion is structural, not numerical: <strong>self-review is not a gate</strong> — a reviewer that shares the author's blind spots, or <em>is</em> the author, cannot be the thing that certifies the work — so the durable guardrails are the ones the generating agent cannot author or weaken for itself.</p>
+<p>These are 2025-era snapshots and the exact rates will fall as models improve — but that does not weaken the argument, because none of the gates that follow depend on a particular number: an external security check, a dependency allowlist, and duplication budgets cost the same whether the failure rate is 45% or 5%; whether that fixed cost is justified depends on the defect costs avoided, which the evaluation plan (§12) proposes to measure rather than assert. The load-bearing conclusion is structural, not numerical: <strong>self-review is not a gate</strong> — a reviewer that shares the author's blind spots, or <em>is</em> the author, cannot be the thing that certifies the work — so the durable guardrails are the ones the generating agent cannot author or weaken for itself.</p>
 
 <h3>2.3 Long-horizon degradation is intrinsic</h3>
-<p>Long context is not free accuracy. On the frontier models tested in mid-2025, one analysis found retrieval degrading well before the window filled — around 50K tokens even in a 1M-token window<sup class="cite"><a href="#r-contextrot">17</a></sup> — echoing the U-shaped position bias documented on 2023-era models<sup class="cite"><a href="#r-lostmiddle">16</a></sup>. <strong>That specific threshold is model-generation-bound and should not be read literally for Opus-4.8-class models, which handle long context far better;</strong> it is cited as motivation, not as a fixed limit. The durable point does not expire: an agent's own errors can compound over a long session<sup class="cite"><a href="#r-selfcond">18</a></sup>, so the robust design keeps state in external, structured memory with cold-start recovery as the default<sup class="cite"><a href="#r-harness">19</a></sup> and retrieves over a structural repo map rather than stuffing context<sup class="cite"><a href="#r-repomap">9</a></sup> — which stays cheaper, faster, and lower-distraction no matter how large or reliable context windows become.</p>
+<p>Long context is not free accuracy. On the frontier models tested in mid-2025, one analysis found retrieval degrading well before the window filled — around 50K tokens even in a 1M-token window<sup class="cite"><a href="#r-contextrot">17</a></sup> — echoing the U-shaped position bias documented on 2023-era models<sup class="cite"><a href="#r-lostmiddle">16</a></sup>. <strong>That specific threshold is model-generation-bound and should not be read literally for Opus-4.8-class models, which handle long context far better;</strong> it is cited as motivation, not as a fixed limit. The durable point does not expire: an agent's own errors can compound over a long session<sup class="cite"><a href="#r-selfcond">18</a></sup>, so the robust design keeps state in external, structured memory with cold-start recovery as the default<sup class="cite"><a href="#r-harness">19</a></sup> and retrieves over a structural repo map rather than stuffing context<sup class="cite"><a href="#r-repomap">9</a></sup> — a trade-off that currently favors retrieval on cost and accuracy, and that should be re-checked as context windows improve (§13).</p>
 
 <h3>2.4 Specifications must be enforced, not merely written</h3>
 <p>Spec-driven development has a maturity ladder — <em>spec-first</em>, <em>spec-anchored</em>, <em>spec-as-source</em><sup class="cite"><a href="#r-sdd">1</a></sup>. Production practice lands on <strong>spec-anchored</strong>: specs and code co-evolve, bound by executable checks. Even Amazon found tests alone insufficient to capture intent and re-added prose specs — but as context, not enforcement<sup class="cite"><a href="#r-vogels">3</a></sup>. Documentation and specs rot; the countermeasure is provenance labeling and anchoring so drift fails CI rather than misleading silently<sup class="cite"><a href="#r-reversa">11</a></sup><sup class="cite"><a href="#r-codified">10</a></sup>.</p>
@@ -267,7 +270,7 @@
 <p>Humans reliably catch intent, edge cases, and missing context, but AI code "looks clean even when wrong," and automation bias raises the rate of following bad advice by ~26%<sup class="cite"><a href="#r-autobias">22</a></sup> — a human-factors effect independent of model generation. A controlled study on early-2025 tools even found experienced developers <strong>19% slower</strong> with AI while believing they were ~20% faster; the authors later revised the study's design (Feb 2026), so the magnitude is contested and tool-bound — but the <em>perception gap</em> it exposed is the durable, design-relevant finding<sup class="cite"><a href="#r-metr">21</a></sup>. The scalable response is well-established: Meta's RADAR uses a risk-tiered funnel that auto-lands low-risk diffs and concentrates human attention on high-risk ones, auto-approving ~60% while keeping revert and incident rates a fraction of manual review<sup class="cite"><a href="#r-radar">23</a></sup>. And for existing code, two model-independent practices hold regardless of capability: pin behavior with characterization tests before change<sup class="cite"><a href="#r-feathers">24</a></sup>, and wrap generation in build+test validation loops, as large-scale migrations do<sup class="cite"><a href="#r-google">25</a></sup>.</p>
 
 <h2 id="principles"><span class="num">3</span>Design principles</h2>
-<p>Nine principles follow directly from Section 2. They are the non-negotiable core; everything else is implementation.</p>
+<p>Nine principles follow directly from Section 2. They are the core; everything else is implementation.</p>
 <div class="grid">
   <div class="card"><span class="tag">P1 · Cheap generation, strict acceptance</span><p>The model generates freely; correctness is decided by an external gate it cannot weaken.<sup class="cite"><a href="#r-clover">7</a></sup></p></div>
   <div class="card"><span class="tag">P2 · Enforce with executables, not prose</span><p>Requirements are kept honest by tests, contracts, and CI checks. Prose is context.<sup class="cite"><a href="#r-vogels">3</a></sup></p></div>
@@ -307,7 +310,7 @@
   <rect class="gate" x="44" y="324" width="600" height="104" rx="9"/>
   <rect class="edge" x="44" y="324" width="7" height="104" rx="3"/>
   <text class="title-t" x="70" y="354">Layer 3 — Gate · <tspan font-family="ui-monospace, Menlo, monospace" font-size="13">leitwerk verify</tspan></text>
-  <text class="sub-t" x="70" y="374">deterministic · the agent cannot edit it</text>
+  <text class="sub-t" x="70" y="374">deterministic · policy is human-owned</text>
   <text class="body-t" x="70" y="398">tiered Definition-of-Done · drift sensor · erosion budgets</text>
   <text class="body-t" x="70" y="416">runs in CI · optional stop / pre-commit hook</text>
   <!-- down arrows -->
@@ -324,7 +327,27 @@
 
 <p><strong>Layer 1 — Durable artifacts.</strong> The source of truth, versioned with the code. The <em>constitution</em> (small, human-owned) states architectural principles, the blast-radius tier definitions, mandatory gates, and hard boundaries. <em>Living specs</em> hold behavior as Given/When/Then, each fragment anchored to the code and tests that satisfy it. The <em>decision log</em> (ADRs) records the <em>why</em> so later sessions do not re-litigate settled choices<sup class="cite"><a href="#r-adr">20</a></sup>. The <em>progress / feature list</em> starts every planned feature marked "failing" to prevent premature completion<sup class="cite"><a href="#r-harness">19</a></sup>. The <em>repo map</em> is a tree-sitter + PageRank symbol map<sup class="cite"><a href="#r-repomap">9</a></sup>, extended to a typed code graph for large repositories.</p>
 <p><strong>Layer 2 — Roles.</strong> Specialized agents, each with scoped context and an assigned model tier (Sections 5–6).</p>
-<p><strong>Layer 3 — Gate.</strong> A single deterministic command, <code>leitwerk verify</code>, composed of tier-selected checks (Section 9). It is the operational form of P1–P2 and is the one thing no role can talk its way past.</p>
+<p><strong>Layer 3 — Gate.</strong> A single deterministic command, <code>leitwerk verify</code>, composed of tier-selected checks (Section 9). It is the operational form of P1–P2: its verdict comes from tools, not from any role's judgment.</p>
+
+<div class="note" style="border-left-color: var(--accent);"><b style="color:var(--accent)">As implemented in this repository.</b> Layer 1 is the tracked <code>leitwerk/</code> tree, not an abstraction: the human-owned <a href="../leitwerk/constitution.md"><code>constitution.md</code></a> (invariants, blast-radius policy, Definition of Done, and the decisions-of-record — there is no separate ADR file), <a href="../leitwerk/tiers.conf"><code>tiers.conf</code></a> (the blast-radius map: tiers→checks, paths→tiers, and the <code>[human-owned]</code> list), the ordered <a href="../leitwerk/roadmap.md"><code>roadmap.md</code></a> (the backlog of <em>future specs</em>), and <a href="../leitwerk/specs/"><code>specs/</code></a> (living specs). Layer 3 is the compiled gate at <code>core/bin/leitwerk</code>. A repository is brought under the framework by <code>leitwerk init</code>, which scaffolds the constitution and tiers file (plus the Claude steering files of §11); specs and a roadmap accumulate through the process itself.</div>
+
+<p>A living spec states the observable contract, not the implementation, so a reviewer can tell what "correct" means without reading the diff. This repository governs itself, and its own gate is anchored to <a href="../leitwerk/specs/self.md"><code>leitwerk/specs/self.md</code></a> (excerpt):</p>
+<pre><code># Spec — leitwerk-devkit governs itself
+
+## Behaviour (the observable contract)
+- `leitwerk verify` runs from the repo root using `leitwerk/tiers.conf` and the
+  repo-local checks in `leitwerk/checks/`, falling back to built-in `core/checks/`.
+- Changing a `core/bin`, `core/checks`, or any `*.sh` path selects tier T2.
+- A T2 gate runs: `json` (all manifests parse), `shell` (`bash -n` + shellcheck
+  when present), `drift` (specs tracked), `selftest` (builds the Go CLI, runs its
+  unit + integration tests, re-asserts the external contract, and executes the
+  documented scenarios in `examples/scenarios/`), `parity` (the guarantee stays
+  in `core/`, stdlib-only; bindings delegate).
+
+## Acceptance checks
+`leitwerk verify --tier T2` exits 0 on the clean repo, and exits non-zero if any
+of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
+`selftest.sh` regresses.</code></pre>
 
 <p>Roles operate a single repeating loop — <em>spec → plan → build → verify → review</em> — shown in Figure 2. The gate is a hard stop: a failing gate returns work to the builder; a passing gate reaches human review. Feedback from review, or a hand-edit by an expert, flows back to the specification rather than being applied blindly.</p>
 
@@ -442,8 +465,24 @@
 </div>
 <p>The verification band is a <em>panel</em>, not a single reviewer — an instantiation of the pattern where distinct specialists each review in their own session with their own prompt and tools<sup class="cite"><a href="#r-cloudflare">4</a></sup>. Which panel members wake is decided by blast-radius tier and diff signals (Section 7), so a read-only display change does not pay for a security and performance review it does not need.</p>
 
+<p>The table above is the tool-agnostic <em>design</em>. The Claude Code binding realizes it with a deliberately small set of subagents plus a workflow, not eleven bespoke roles — the reference implementation ships <strong>four</strong> role subagents in <a href="../bindings/claude/agents/"><code>bindings/claude/agents/</code></a>, reused unchanged as the review workflow's <code>agentType</code>s (Section 7):</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Design role (Fig. 3)</th><th>As implemented in this repo</th><th>Model</th></tr></thead>
+  <tbody>
+    <tr><td>Architect</td><td><code>architect</code> subagent — design, seams, structural fitness checks</td><td><span class="pill m-big">Opus</span></td></tr>
+    <tr><td>Test Engineer + Correctness Reviewer</td><td><code>test-engineer</code> subagent — owns the executable oracle; extends the golden suite</td><td><span class="pill m-small">Sonnet</span></td></tr>
+    <tr><td>Security Specialist</td><td><code>security-reviewer</code> subagent — woken on T2 / untrusted-input changes</td><td><span class="pill m-big">Opus</span></td></tr>
+    <tr><td>Scout / Locator</td><td><code>scout</code> subagent — read-only retrieval</td><td><span class="pill m-small">Haiku</span></td></tr>
+    <tr><td>Lead Orchestrator</td><td><strong>retired</strong> — replaced by the review workflow script (control flow in code, §7)</td><td>—</td></tr>
+    <tr><td>Spec Steward</td><td>carried by the phase skills (<code>leitwerk-spec</code>, <code>leitwerk-onboard</code>) and the human, not a standing subagent</td><td>—</td></tr>
+    <tr><td>Summarizer · Performance · UX/Visual</td><td>design lenses, not yet realized as separate subagents</td><td>—</td></tr>
+  </tbody>
+</table>
+</div>
+
 <h2 id="routing"><span class="num">6</span>Capability-tiered model routing</h2>
-<p>Cost and reliability both improve when model capability is matched to task difficulty rather than applied uniformly. The <em>architect/editor</em> split — a strong model plans, a cheaper model applies edits — reached state-of-the-art at lower cost<sup class="cite"><a href="#r-repomap">9</a></sup>, and multi-agent systems find that token spend explains most of the variance in outcome<sup class="cite"><a href="#r-multiagent">19</a></sup>, so spend must be directed deliberately.</p>
+<p>Matching model capability to task difficulty, rather than applying one model uniformly, aims to improve cost and reliability together. The <em>architect/editor</em> split — a strong model plans, a cheaper model applies edits — reached state-of-the-art at lower cost in its authors' account<sup class="cite"><a href="#r-repomap">9</a></sup> (practitioner-reported, not a controlled study), and multi-agent systems find that token spend explains most of the variance in outcome<sup class="cite"><a href="#r-multiagent">19</a></sup>, so spend must be directed deliberately.</p>
 <div class="scroll">
 <table>
   <thead><tr><th>Task class</th><th>Examples</th><th>Model tier</th></tr></thead>
@@ -463,7 +502,7 @@
 <h4>Phase-driven</h4>
 <p>The Orchestrator invokes roles per workflow stage: Architect during design, Implementer during construction, the verification panel at the gate. This is the default backbone of every workflow in Section 8.</p>
 <h4>Signal-driven (the trigger table)</h4>
-<p>Observable properties of a change wake the right specialists automatically, so rigor tracks risk without manual routing — a mechanism adapted from "codified context" trigger tables<sup class="cite"><a href="#r-codified">10</a></sup>.</p>
+<p>Observable properties of a change are meant to wake the right specialists without manual routing — a mechanism adapted from "codified context" trigger tables<sup class="cite"><a href="#r-codified">10</a></sup>. In the current implementation only the path→tier mapping is mechanical; the diff-signal rows below are carried as review instructions in the skills and constitution, not as automatic triggers.</p>
 <div class="scroll">
 <table>
   <thead><tr><th>Signal in the diff / task</th><th>Wakes</th><th>Min tier</th></tr></thead>
@@ -481,7 +520,8 @@
 <p>A human can invoke any role directly ("have the security specialist look at this") at any point — the escape hatch that keeps humans in control without reading code.</p>
 
 <h3 id="realization">Realization: native orchestration where the platform provides it</h3>
-<p>The ensemble and its trigger table are the tool-agnostic <em>design</em>; each platform realizes them with its own mechanism. On Claude Code, this layer is not a bespoke orchestrator role — it is a <strong>dynamic workflow</strong>: a deterministic orchestration script that fans roles out in parallel and has independent agents attempt to <em>refute</em> each finding before it counts. The mapping is direct: the orchestrator becomes the workflow script (control flow in code, not model discretion); the roles become the workflow's <code>agentType</code>s, reused unchanged; the trigger table becomes the workflow's tier-driven fan-out. Two properties keep this honest. First, workflows are opt-in and scaled by blast radius — a full adversarial panel runs for T2, while T0/T1 stay lightweight. Second, and decisively, the workflow's verification is <em>soft</em> (agents judging agents, better because it is adversarial and diverse, but still model judgment); it never replaces the <em>hard</em> gate. <code>leitwerk verify</code> remains an external oracle the workflow cannot overrule, enforced at turn end regardless of how the panel voted. Platforms without such an engine (open-code / Codex) run the roles sequentially and lean on the same gate in CI — the guarantee is identical because it lives in the gate, not the orchestration.</p>
+<p>The ensemble and its trigger table are the tool-agnostic <em>design</em>; each platform realizes them with its own mechanism. On Claude Code, this layer is not a bespoke orchestrator role — it is a <strong>dynamic workflow</strong>: a deterministic orchestration script that fans roles out in parallel and has independent agents attempt to <em>refute</em> each finding before it counts. The mapping: the orchestrator becomes the workflow script (control flow in code, not model discretion); the roles become the workflow's <code>agentType</code>s, reused unchanged; the trigger table is realized so far only as the workflow's tier-driven fan-out — the diff-signal triggers of the table above remain a design target. Two properties bound this. First, workflows are opt-in and scaled by blast radius — a full adversarial panel runs for T2, while T0/T1 stay lightweight. Second, the workflow's verification is <em>soft</em> (agents judging agents, better because it is adversarial and diverse, but still model judgment); it never replaces the <em>hard</em> gate. <code>leitwerk verify</code> remains an external oracle the workflow cannot overrule, enforced at turn end regardless of how the panel voted. Platforms without such an engine (open-code / Codex) run the roles sequentially and lean on the same gate in CI — the guarantee is identical because it lives in the gate, not the orchestration.</p>
+<p>Concretely, the workflow is <a href="../core/templates/workflows/leitwerk-review.mjs"><code>.claude/workflows/leitwerk-review.mjs</code></a>. It runs three phases — <strong>Review</strong> (one role subagent per dimension, scaled by tier: correctness at T0, +spec-fidelity at T1, +security at T2), <strong>Verify</strong> (independent agents try to <em>refute</em> each finding; unrefuted findings survive), and <strong>Gate</strong> (it runs <code>leitwerk verify</code> and only reports the result). Its return value marks a change landable only when the gate is green <em>and</em> no finding survived — but the gate, enforced at turn end, is what actually blocks. A Claude Code plugin cannot package a workflow, so it ships as a <code>core/templates/</code> scaffold that <code>leitwerk init</code> writes into the repo; the phase skills prefer it and fall back to spawning the roles directly, so review never depends on it being present.</p>
 
 <h2 id="workflows"><span class="num">8</span>Workflows: greenfield, feature, bugfix</h2>
 <p>The three use cases share the core loop — <em>spec → plan → build → verify → review</em> — but enter it differently and weight the bands differently (Figure 4). Greenfield leads with architecture; a feature on existing code must first <em>onboard</em> and pin behavior; a bugfix optimizes for the lightest safe path.</p>
@@ -563,7 +603,7 @@
 </ol>
 
 <h2 id="gate"><span class="num">9</span>Verification &amp; the gate</h2>
-<p><code>leitwerk verify</code> is one deterministic command, composed of tier-selected checks (Figure 5). The agent runs it locally; CI runs it authoritatively; on Claude Code it may also be wired as a stop / pre-commit hook so a task cannot end without a green gate. Gate <em>definitions</em> live in the constitution and are human-owned: an agent may propose a new check but cannot lower a threshold or disable one without a human-approved constitution change.</p>
+<p><code>leitwerk verify</code> is one deterministic command, composed of tier-selected checks (Figure 5). The agent runs it locally; CI runs it authoritatively; on Claude Code it is also wired as a <code>Stop</code> hook, so a turn cannot end on a red gate at the hook's configured tier (the hook reads <code>$LEITWERK_TIER</code>, defaulting to T1 — per-change tier selection from the diff happens in CI, not in the hook). Gate <em>definitions</em> are human-owned — the tier→check policy lives in the tiers file, governed by the constitution: an agent may propose a new check but cannot lower a threshold, remove a check, or downgrade a path's tier without a human-approved change to those files.</p>
 
 <figure class="fig">
 <svg viewBox="0 0 760 300" role="img" aria-label="Blast-radius tiers: each tier adds cumulative checks and a stricter human checkpoint.">
@@ -598,7 +638,7 @@
   <text class="body-t" x="176" y="242">· dry-run / rollback proof · characterization</text>
   <rect class="node t2s" x="576" y="196" width="160" height="62" rx="8" stroke-width="2"/><text class="lbl-c" x="656" y="222" font-weight="700">mandatory</text><text class="sub-c" x="656" y="240">human sign-off</text>
   <!-- cross-cutting -->
-  <text class="sub-t" x="44" y="284">Every tier also runs the drift sensor (spec↔code anchors resolve) and an advisory LLM-as-judge panel — never the sole gate.</text>
+  <text class="sub-t" x="44" y="284">Design target: drift sensor at every tier + an advisory review panel (never the sole gate). Shipped: drift from T1, panel at T2 (§9.2).</text>
 </svg>
 <figcaption>Figure 5. Blast-radius tiers. Checks and human scrutiny accumulate with the potential damage of a change.</figcaption>
 </figure>
@@ -613,8 +653,72 @@
   </tbody>
 </table>
 </div>
-<p>Two cross-cutting checks run at every tier. The <strong>drift sensor</strong> confirms spec fragments still resolve to the code and tests they are anchored to; unresolved anchors are drift and are surfaced to a human to reconcile (never auto-resolved). An <strong>LLM-as-judge / panel review</strong> runs as an <em>advisory</em> annotation only — never the sole gate, because same-model reviewers share the generator's blind spots<sup class="cite"><a href="#r-judge">29</a></sup>.</p>
+<p>Two cross-cutting checks are part of the design. The <strong>drift sensor</strong> is specified to confirm spec fragments still resolve to the code and tests they are anchored to, surfacing unresolved anchors for a human to reconcile (never auto-resolved) — the <em>shipped</em> check is currently a placeholder that only counts tracked specs; the anchor mechanism is roadmap item M1.1 and an open question in §13. An <strong>LLM-as-judge / panel review</strong> runs as an <em>advisory</em> annotation only — never the sole gate, because same-model reviewers share the generator's blind spots<sup class="cite"><a href="#r-judge">29</a></sup>.</p>
 <div class="note"><b>Mutation score, not line coverage.</b> AI-written tests frequently achieve high coverage while asserting nothing meaningful. A mutation-score floor — deliberately injecting faults and requiring the suite to catch them — is what proves the tests are load-bearing rather than decorative.</div>
+
+<h3 id="cli">9.1 The gate as a command</h3>
+<p>The gate is a single static binary — <code>core/bin/leitwerk</code>, a compiled Go program (source: <a href="../core/cmd/leitwerk/"><code>core/cmd/leitwerk</code></a>; the binary itself is a build artifact, not committed) with no third-party dependencies, so it cross-compiles to one file and runs with only a shell present. The checks it orchestrates stay as shell scripts that shell out to the real toolchains; the binary only selects and runs them. The same binary is what CI runs, what a Claude Code Stop hook runs, and what an open-code agent runs from <code>AGENTS.md</code> — so the strongest guarantee never depends on which agent produced the change.</p>
+<div class="scroll">
+<table>
+  <thead><tr><th>Subcommand</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>verify [--tier T0|T1|T2]</code></td><td>Run the tier's cumulative checks; print a line per check and a PASS/FAIL verdict.</td></tr>
+    <tr><td><code>tier &lt;path&gt;</code></td><td>Print the blast-radius tier for a changed path (first-match glob table).</td></tr>
+    <tr><td><code>guard &lt;path&gt;</code></td><td>Exit 3 if the path is human-owned; 0 if editable.</td></tr>
+    <tr><td><code>drift</code></td><td>Surface spec↔code divergence (never resolves it).</td></tr>
+    <tr><td><code>init [dir]</code></td><td>Scaffold <code>leitwerk/{constitution.md,tiers.conf}</code> and the Claude steering files.</td></tr>
+    <tr><td><code>version</code></td><td>Print the version.</td></tr>
+  </tbody>
+</table>
+</div>
+<p><strong>Exit codes</strong> are the contract every surface keys off: <code>0</code> gate green / path editable · <code>1</code> a check failed (gate red) · <code>2</code> usage error · <code>3</code> path is human-owned. A single check's own <code>exit 2</code> means <em>skip</em> (nothing to run) and never fails the gate — a green gate means checks ran or abstained visibly. For the shipped checks that property holds by construction; for repo-local overrides it is a constitutional convention review must uphold — the gate cannot verify a check's own honesty.</p>
+
+<h3 id="tiersfile">9.2 The policy file, and the shipped defaults</h3>
+<p>The tier table above (Fig. 5) is the design target a mature repository grows into; the <em>shipped</em> defaults are leaner and auto-detect a toolchain, skipping cleanly until wired to a project's real build/test/SAST. Policy is one human-owned file, <a href="../core/leitwerk.tiers"><code>leitwerk.tiers</code></a> (an adopter's copy is <code>leitwerk/tiers.conf</code>), with three tables: <code>[tiers]</code> maps a tier to its cumulative check list, <code>[paths]</code> maps a path glob to a tier (first match wins), and <code>[human-owned]</code> lists the files an agent may propose but not edit.</p>
+<pre><code>[tiers]
+T0 = lint
+T1 = lint types tests drift
+T2 = lint types tests drift sast erosion
+
+[human-owned]
+leitwerk/constitution.md
+leitwerk/tiers.conf
+leitwerk/roadmap.md
+
+[paths]
+docs/**             = T0
+**/*.md             = T0
+**/db/migrations/** = T2
+**/*.sql            = T2
+infra/**            = T2
+**/*.tf             = T2
+**/*.yaml           = T2
+*                   = T1</code></pre>
+<p>Each check is one script that exits 0 (pass), 1 (fail), or 2 (skip). The built-in checks in <a href="../core/checks/"><code>core/checks/</code></a> auto-detect a toolchain: <code>lint</code>, <code>types</code>, <code>tests</code>, <code>sast</code> (semgrep when installed; a dependency-policy check is a design target, not yet shipped), <code>drift</code> (placeholder, see above), and <code>erosion</code> (duplication budget when an analyzer is installed). A consuming repo overrides any check by dropping its own <code>&lt;name&gt;.sh</code> into <code>leitwerk/checks/</code> — it never edits the installed core. This repository does exactly that: being a polyglot tool rather than an app, its own T2 gate is <code>json shell drift selftest parity</code>, with repo-local checks in <a href="../leitwerk/checks/"><code>leitwerk/checks/</code></a> — <code>json</code> (manifests parse), <code>shell</code> (<code>bash -n</code> + shellcheck), <code>selftest</code> (the CLI's golden suite: it builds the Go binary, runs its unit + integration tests, re-asserts the external contract, and executes the runnable scenarios in <a href="../examples/scenarios/"><code>examples/scenarios/</code></a> — each an executable statement of one framework guarantee), and <code>parity</code> (the boundary fitness function of §11), plus <code>context</code> (§9.4 — budgets the always-on context surface; runs at every tier). Running the gate on this repository (2026-07-19):</p>
+<pre><code>leitwerk verify <span class="c-dim">(tier T2)</span>
+<span class="c-dim">checks: json shell drift selftest parity context</span>
+
+  <span class="c-ok">✓</span>  json       4 JSON manifest(s) parse
+  <span class="c-ok">✓</span>  shell      19 script(s): bash -n + shellcheck clean
+  <span class="c-ok">✓</span>  drift      6 spec(s) tracked; no unreconciled drift flagged
+  <span class="c-ok">✓</span>  selftest   CLI golden behaviour intact (built + tested + tiers + gate + scenarios)
+  <span class="c-ok">✓</span>  parity     parity boundary intact (guarantee in core/, stdlib-only, bindings delegate)
+  <span class="c-ok">✓</span>  context    always-on context ~990 est. tokens (budget 2000), files within budget
+
+<span class="c-ok">gate: PASS</span></code></pre>
+<div class="note"><b>Implementation status (2026-07-19).</b> The CI workflow files exist and are structurally validated but have not yet executed on a remote (no public repository yet — roadmap M2.3), and the plugin/skills/workflow composition has not yet been driven in a live session (M2.2). Claims about CI enforcement and workflow orchestration in this paper therefore describe artifacts as written and locally exercised, not yet remotely operated.</div>
+
+<h3 id="guard">9.3 The human-owned guard</h3>
+<p>Gate <em>definitions</em> are human-owned, and that boundary is enforced mechanically rather than by prose. <code>leitwerk guard &lt;path&gt;</code> reports whether a path matches the <code>[human-owned]</code> list; the Claude binding wires it to a <code>PreToolUse</code> hook (<a href="../bindings/claude/bin/leitwerk-hook-guard"><code>leitwerk-hook-guard</code></a>) that <em>blocks</em> a Write/Edit to the constitution, the tiers file, or the roadmap before it happens — open code enforces the same boundary with required review / CODEOWNERS. An agent proposes changes to these files; a human makes them. This is a guardrail: the hard guarantee is still the gate, so open-code parity is unaffected. The guard's mechanical scope is deliberately narrow — it protects the three policy files, not the check <em>scripts</em>, which remain agent-editable at tier T2 (reviewed, and covered by the CLI's own golden suite in this repository). The threat model in §13 discusses what that boundary does and does not defend against.</p>
+
+<h3 id="selfcost">9.4 Cost of the framework itself</h3>
+<p>A framework that argues from token economics<sup class="cite"><a href="#r-multiagent">19</a></sup> must account for its own overhead. Three cost surfaces exist, and each is either measured or bounded here (figures from this repository, 2026-07-19; they are snapshots and re-measurable at any time).</p>
+<ul>
+  <li><strong>Always-on context.</strong> What every agent session pays before doing any work: the scaffolded <code>CLAUDE.md</code> (≤ 200 lines by template guidance) plus the skill/agent frontmatter descriptions the session's system prompt lists. Measured on this repository: ≈ 990 estimated tokens total (bytes/4 heuristic). Everything else — the constitution, skills' procedure bodies, role charters, specs — loads on demand: skill bodies are 171–315 words, role charters 115–166 words, and a session reads only the specs relevant to its change. This split (small always-on bridge, procedures on demand) is the direct application of P4 to the framework's own artifacts.</li>
+  <li><strong>Gate execution.</strong> Wall time, not tokens: on this repository (warm build cache) T0 ≈ 0.1 s, T1 ≈ 0.5 s, T2 ≈ 1–2 s including compiling the Go CLI and running its test suite; the verify output an agent reads back is ≤ ~420 bytes. A red gate feeds only the failing check's last line into context, not a log dump.</li>
+  <li><strong>Review fan-out.</strong> The T2 workflow's cost is bounded by construction: at most 3 role reviews, at most 8 refutation agents per dimension (a schema-level cap), and 1 gate runner; T0/T1 skip the panel entirely. This is the largest token cost in the framework and it is paid only at the highest blast radius.</li>
+</ul>
+<p>The always-on surface is also <em>gated</em>: a repo-local <code>context</code> check budgets <code>CLAUDE.md</code> (200 lines), each path-scoped rule (100 lines), each frontmatter description (80 words), and the always-on total (2 000 estimated tokens), so a change that bloats the per-session tax turns the gate red instead of degrading every future turn silently. Outcome-level efficiency — tokens-to-green-gate, human interventions per landed change — is stochastic and model-bound; it belongs in the periodic evaluation harness of §12, not in a per-change gate.</p>
 
 <h2 id="hitl"><span class="num">10</span>Human-in-the-loop</h2>
 <p>Humans own exactly two things: the <strong>constitution and specs</strong> (intent) and the <strong>behavioral / visual review</strong> (acceptance). Everything between is machine-gated. Three rules keep oversight cheap without losing safety.</p>
@@ -626,24 +730,30 @@
 </div>
 
 <h2 id="adoption"><span class="num">11</span>Adoption: Claude Code &amp; open agents</h2>
-<p>Leitwerk's core — the artifacts, roles, workflows, and gate — is tool-agnostic. Each tool gets a thin binding. The <code>leitwerk verify</code> gate is a plain executable wired into CI, so the strongest guarantee never depends on a particular agent runtime.</p>
+<p>Leitwerk's core — the artifacts, the gate, and the tier policy — is tool-agnostic and lives in <a href="../core/"><code>core/</code></a>. Each tool gets a thin binding under <a href="../bindings/"><code>bindings/</code></a> that <em>invokes</em> the core and never reimplements it. The <code>leitwerk verify</code> gate is a plain executable wired into CI, so the strongest guarantee never depends on a particular agent runtime.</p>
 <div class="scroll">
 <table>
-  <thead><tr><th>Leitwerk concept</th><th>Claude Code binding</th><th>Open-agent binding (Codex / open tooling)</th></tr></thead>
+  <thead><tr><th>Leitwerk concept</th><th>Claude Code binding — a plugin at <code>bindings/claude/</code></th><th>Open-agent binding — <code>bindings/open/</code></th></tr></thead>
   <tbody>
-    <tr><td>Constitution &amp; project context</td><td><code>CLAUDE.md</code> + <code>leitwerk/constitution.md</code></td><td><code>AGENTS.md</code> (+ per-module <code>AGENTS.md</code>)</td></tr>
-    <tr><td>Roles</td><td>subagents in <code>.claude/agents/*.md</code>, spawned by the Orchestrator</td><td>agent definitions in <code>.agents/</code>; model/router in <code>.codex/config.toml</code></td></tr>
-    <tr><td>Workflow phases</td><td>skills in <code>.claude/skills/</code> (<code>leitwerk-onboard/spec/plan/build/review</code>)</td><td>portable skills in <code>.agents/skills/</code> + prompt templates</td></tr>
-    <tr><td>Model routing</td><td>per-subagent model + effort settings</td><td>router config in <code>.codex/config.toml</code></td></tr>
-    <tr><td>Gate enforcement</td><td><code>leitwerk verify</code> as a stop / pre-commit hook + CI</td><td><code>leitwerk verify</code> in CI (required check)</td></tr>
-    <tr><td>Durable memory</td><td>repo <code>leitwerk/</code> tree + progress JSON</td><td>identical repo <code>leitwerk/</code> tree</td></tr>
+    <tr><td>Constitution &amp; context</td><td><code>CLAUDE.md</code> + <code>leitwerk/constitution.md</code></td><td><code>AGENTS.md</code> (+ nested per-package)</td></tr>
+    <tr><td>Roles</td><td>four subagents in <a href="../bindings/claude/agents/"><code>agents/</code></a> (<code>architect</code>, <code>test-engineer</code>, <code>security-reviewer</code>, <code>scout</code>), spawned by the phase skills / review workflow</td><td><code>.codex/agents/*.toml</code> (Codex custom agents); other tools apply them as review lenses</td></tr>
+    <tr><td>Phase skills</td><td><a href="../bindings/claude/skills/"><code>skills/</code></a>: <code>leitwerk-onboard / spec / plan / build / review</code></td><td>the working method written into <code>AGENTS.md</code></td></tr>
+    <tr><td>Model routing</td><td>per-subagent <code>model:</code> in the agent frontmatter (Opus / Sonnet / Haiku)</td><td>per-agent <code>model_reasoning_effort</code> in <code>.codex/agents/*.toml</code></td></tr>
+    <tr><td>Gate enforcement</td><td>a <code>Stop</code> hook runs <code>leitwerk verify</code>; a <code>PreToolUse</code> hook runs <code>leitwerk guard</code> (<a href="../bindings/claude/hooks/hooks.json"><code>hooks.json</code></a>)</td><td><code>leitwerk verify</code> in CI as a required check; CODEOWNERS for human-owned files</td></tr>
+    <tr><td>Distribution</td><td>a plugin (<code>bin/</code> launcher + <a href="../.claude-plugin/marketplace.json">marketplace</a>)</td><td>copy <code>AGENTS.md</code>, <code>.codex/</code>, and <a href="../bindings/open/ci/leitwerk-verify.yml"><code>ci/leitwerk-verify.yml</code></a> into the repo</td></tr>
   </tbody>
 </table>
 </div>
-<p>This maps onto substrate the target repository already has — <code>AGENTS.md</code>, <code>.claude/</code>, <code>.codex/</code>, and <code>.agents/</code> coexist today — so adoption formalizes existing structure rather than introducing a new one. The current phased skills (research / plan / implement / validate) are the predecessors Leitwerk's <code>leitwerk-*</code> skills replace once proven.</p>
+<p>The two bindings are deliberately <em>not</em> symmetric, and the framework is explicit about where the asymmetries fall:</p>
+<ul>
+  <li><strong>A plugin cannot package everything.</strong> <code>CLAUDE.md</code>, <code>.claude/rules/</code>, and the review <code>.claude/workflows/</code> are repo-level Claude Code primitives a plugin cannot carry, so <code>leitwerk init</code> scaffolds them from <a href="../core/templates/"><code>core/templates/</code></a> instead.</li>
+  <li><strong>The marketplace sparse-clones only the plugin subdirectory,</strong> so the plugin's launcher cannot reach a sibling <code>core/</code>; an adopter supplies the core binary via <code>LEITWERK_HOME</code> or a global <code>go install</code>.</li>
+  <li><strong>Guarantee-parity, not ergonomics-parity.</strong> The hard guarantee — the gate, reachable via <code>leitwerk verify</code> + CI with no agent runtime present — must hold identically on every tool. The ergonomics (Claude Code skills, subagents, the fan-out workflow) are <em>not</em> expected to reach open code, and that is acceptable, because they never carry the guarantee.</li>
+</ul>
+<p>The last point is enforced structurally, not by convention. A structural fitness check — <a href="../leitwerk/checks/parity.sh"><code>leitwerk/checks/parity.sh</code></a>, part of this repo's own gate — fails if gate logic leaks into a binding, if a binding ships checks or tier policy, or if the core gate acquires a third-party dependency; and a dedicated CI job runs the core gate with <em>no</em> agent runtime and without the optional analyzers, proving an open-code adopter gets the same result. If that job is green, the guarantee has reached open code whether or not any of the Claude Code ergonomics did.</p>
 
 <h2 id="evaluation"><span class="num">12</span>Evaluation plan</h2>
-<p>Leitwerk should be judged on sustained delivery, not one-shot benchmarks — headline SWE-bench numbers are contaminated and skewed toward trivial fixes<sup class="cite"><a href="#r-swebench">30</a></sup>; long-horizon, multi-file suites (SWE-bench Pro, SWE-rebench) are the honest signal. Proposed rollout and metrics:</p>
+<p>Leitwerk should be judged on sustained delivery, not one-shot benchmarks — headline SWE-bench numbers are contaminated and skewed toward trivial fixes<sup class="cite"><a href="#r-swebench">30</a></sup>; long-horizon, multi-file suites (SWE-bench Pro, SWE-rebench) are the more informative signal. Proposed rollout and metrics:</p>
 <ol>
   <li><strong>Phase 0 — the gate first.</strong> Build <code>leitwerk verify</code> (tiered DoD + drift sensor + erosion budgets) and wire it into CI on one existing application. Highest leverage, best evidence, immediate value before any role exists.</li>
   <li><strong>Phase 1 — greenfield loop</strong> on one new small application end-to-end.</li>
@@ -651,6 +761,7 @@
   <li><strong>Phase 3 — long-lived hardening</strong>: consolidation passes, checkpoint pruning from telemetry, growing golden suite with per-cohort monitoring.</li>
 </ol>
 <p><strong>Metrics.</strong> Revert rate and production-incident rate of AI-landed changes (vs. a manual baseline); regression escapes caught by the golden suite; mutation score trend; duplication / complexity / churn against budget; human review minutes per landed change; drift incidents surfaced vs. shipped. Success is <em>flat-or-improving</em> quality metrics as the codebase grows — the erosion the evidence predicts, not observed.</p>
+<p><strong>Efficiency.</strong> Two measurement classes with different homes. <em>Deterministic proxies</em> — always-on context size, gate wall time, gate output size — are reproducible per commit and belong in CI as budget checks (§9.4): a change that regresses them turns the gate red. <em>Outcome efficiency</em> — tokens-to-green-gate, wall time to a landed change, human interventions per change, pass rate — is stochastic and model-bound, so it belongs in a periodic A/B harness: the same fixed task set driven with and without the framework, several runs per task, reporting cost and outcome distributions. No off-the-shelf benchmark measures a governance framework's overhead; the closest usable substrates are long-horizon suites (SWE-bench Pro-class) and terminal-agent suites (Terminal-Bench-class) with cost reporting, adapted to run against a Leitwerk-governed copy of the target repository.</p>
 
 <h2 id="limitations"><span class="num">13</span>Limitations &amp; open questions</h2>
 <p>Leitwerk is a synthesis of what the 2023–2026 record shows works; several load-bearing pieces are nonetheless under-proven, and the framework should be adopted with that in view.</p>
@@ -659,6 +770,8 @@
   <li><strong>Spec-completeness becomes the ballgame.</strong> If humans never read code, the only human-anchored ground truth is the spec and the behavioral review. Under-specified behavior is invisible until it fails.</li>
   <li><strong>Drift-anchor mechanism is unsettled</strong> (AST fingerprint vs. spec-id comments vs. test-name convention) and determines drift-sensor precision.</li>
   <li><strong>Agents remain weak at system-wide architecture</strong> — the framework relies on humans for decomposition and seams (P9); it does not remove that dependency, it channels it.</li>
+  <li><strong>The threat model is narrower than the guarantee language suggests.</strong> Mechanical protection covers the three policy files; the check <em>scripts</em> are agent-editable (at T2, under review), the Claude Stop hook verifies at a configured tier rather than the diff-derived one, hooks themselves can be disabled by a user, and the soft review panel is same-model judgment that can share the generator's blind spots. The deliberate backstop is diff-tiered CI on a protected branch plus human review of policy and checks — but an adversarial analysis of the whole loop (including prompt injection through specs and reverse-derived INFERRED content) has not been done.</li>
+  <li><strong>Artifact lifecycle over years is unproven.</strong> Specs, plans, and decisions-of-record accumulate monotonically; without curation the "durable artifacts" layer becomes its own context liability. The implementation now distinguishes living contracts from perishable change records (a spec's <code>Status:</code> line; plans archived after landing), but the cadence and mechanics of consolidation — merging landed change-specs into area specs, pruning the active set — are a design sketch, not yet practiced governance.</li>
   <li><strong>Long-lived AI-authored projects are too new for longitudinal evidence</strong>; the maintenance claims rest on 2025–2026 practice and preprints, not multi-year studies.</li>
   <li><strong>Part of the evidence base is perishable by design.</strong> The model-capability snapshots in §2 (security-failure rates, the context-rot threshold, iteration-degradation, the productivity delta) were measured on GPT-4-class or early-2025 models; they are dated in §14 and meant to be re-checked. As long-context reliability and secure-by-default behaviour improve, the <em>necessity</em> of P4 (retrieve, don't preload) and the <em>intensity</em> of the security gate should be re-tuned — the framework treats this as scheduled maintenance of its own assumptions, not a fixed liability.</li>
 </ul>

@@ -1,5 +1,7 @@
 # Plan — <feature>
 
+Status: active (YYYY-MM-DD) <!-- a plan is per-change and perishable: when every step has landed, mark it landed and move it to leitwerk/specs/archive/ -->
+
 The plan turns a spec into a sequence of gated steps. Each step is small enough
 to verify on its own and leaves the gate green.
 

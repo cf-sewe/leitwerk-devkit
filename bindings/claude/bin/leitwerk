@@ -4,14 +4,15 @@
 # tool-agnostic core CLI (bindings never reimplement the gate).
 #
 # A marketplace install sparse-copies ONLY this plugin dir, so core/ is NOT next
-# to it — an adopter must supply core via LEITWERK_HOME or the npm package. The
-# relative paths below resolve only in a full-repo checkout (development).
+# to it — an adopter must supply the core binary via LEITWERK_HOME or a global
+# install (`go install`). The relative paths below resolve only in a full-repo
+# checkout (development).
 #
 # Resolution order:
 #   1. $LEITWERK_HOME/bin/leitwerk         (explicit install — the adopter path)
 #   2. core/ in the same checkout          (full-repo clone / dev only)
 #   3. a vendored core/ next to the plugin (only if one was deliberately copied)
-#   4. a globally installed CLI            (npm i -g @cf-sewe/leitwerk)
+#   4. a globally installed CLI            (go install …/core/cmd/leitwerk@latest)
 set -euo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -25,6 +26,6 @@ done
 real="$(command -v -a leitwerk 2>/dev/null | grep -vF "$SELF_DIR/leitwerk" | head -1 || true)"
 if [ -n "$real" ]; then exec "$real" "$@"; fi
 
-echo "leitwerk: core CLI not found. Install it with: npm i -g @cf-sewe/leitwerk" >&2
-echo "         (or set LEITWERK_HOME to the core/ directory)" >&2
+echo "leitwerk: core CLI not found. Install it with: go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest" >&2
+echo "         (or set LEITWERK_HOME to the core/ directory of a checkout)" >&2
 exit 127

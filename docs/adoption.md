@@ -4,9 +4,12 @@ The recommended order — highest leverage first, matching the whitepaper's
 Phase 0 → 3 rollout.
 
 ## Phase 0 — the gate first (do this before anything else)
-1. Make the CLI resolvable. Until it is on npm, either clone this repo and set
-   `LEITWERK_HOME=/path/to/leitwerk-devkit/core` (and put `$LEITWERK_HOME/bin` on
-   PATH), or `npm install -g @cf-sewe/leitwerk` once published.
+1. Make the CLI resolvable. The gate is a single static Go binary — either build
+   it from a checkout (`make -C core build`, then set
+   `LEITWERK_HOME=/path/to/leitwerk-devkit/core` and put `$LEITWERK_HOME/bin` on
+   PATH), `go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest`, or
+   drop a prebuilt release binary on PATH. The binary embeds its checks/templates,
+   so it does not depend on the repo layout.
 2. `leitwerk init` in the target repo → `leitwerk/{constitution.md,tiers.conf}`
    plus the Claude steering files `CLAUDE.md`, `.claude/rules/tier-discipline.md`,
    and `.claude/workflows/leitwerk-review.mjs` (these are repo-level; a plugin
@@ -32,7 +35,7 @@ and — activated automatically, with no manual `.claude` hook setup — the
 Stop-hook gate and the `PreToolUse` guard that blocks edits to human-owned files.
 The plugin's `leitwerk` launcher still calls the core CLI from Phase 0 (a
 marketplace install copies only the plugin, not `core/`), so `LEITWERK_HOME` or
-the npm package must be present. The `CLAUDE.md`, `.claude/rules/`, and the review
+a `go install`ed binary on PATH must be present. The `CLAUDE.md`, `.claude/rules/`, and the review
 workflow `.claude/workflows/leitwerk-review.mjs` scaffolded in Phase 0 are what
 steer the session; the workflow drives T2 fan-out review (opt-in).
 

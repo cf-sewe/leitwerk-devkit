@@ -70,3 +70,16 @@ until the CLI handles untrusted input.
   `leitwerk init` scaffolds into `.claude/workflows/leitwerk-review.mjs`; the
   skills prefer it and fall back to spawning roles directly, so review never
   depends on it being present. See `leitwerk/specs/workflow-orchestration.md`.
+- 2026-07-19: Reimplemented the core CLI (`core/bin/leitwerk`) from Bash as a
+  compiled Go binary. Go over Rust for an I/O-bound orchestration gate:
+  static-by-default binaries, simple cross-compilation, a zero-dependency
+  stdlib build, `//go:embed` for checks/templates (layout-independent), and
+  `go install` distribution. The external contract is unchanged; checks stay
+  shell scripts. Toolchain pinned with mise (Go + Node LTS). See
+  `leitwerk/specs/go-cli.md`.
+- 2026-07-19: Context budgets are policy: `CLAUDE.md` ≤ 200 lines, each
+  `.claude/rules/*.md` ≤ 100 lines, each skill/agent frontmatter description
+  ≤ 80 words, always-on total ≤ 2000 estimated tokens. Enforced by the
+  repo-local `context` check at every tier. The numbers are recorded here
+  because a check script is agent-editable while budgets are policy. See
+  `docs/reviews/20260719_191453-leitwerk-concept-review.md`.
