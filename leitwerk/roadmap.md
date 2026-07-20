@@ -38,29 +38,6 @@ before making it broadly adoptable.
 
 ### Milestone 1 — make the framework's claims true
 
-**M1.1 · drift-detection** · tier **T2** (`core/checks/drift.sh`)
-- *Problem:* "surface spec↔code drift, don't resolve it" is the headline
-  principle, but `drift.sh` only counts spec files and always reports no drift.
-- *Behaviour:* a spec declares the code it governs (path/symbol anchors); the
-  check flags (a) an anchor that no longer resolves, and (b) governed code that
-  changed in a range where its spec did not, or vice-versa. It surfaces and
-  exits non-zero for a human to reconcile; it never edits either side.
-- *Acceptance:* on a repo where a spec's anchored symbol is renamed without
-  updating the spec, `leitwerk verify` goes red with a specific, human-readable
-  divergence; on a consistent repo it stays green.
-- *Roles/skills:* `architect` (anchor format), `test-engineer` (add drift cases
-  to `selftest`).
-
-**M1.2 · reference-app-real** · tier **T1/T2**
-- *Problem:* `examples/reference-app` has only a constitution; the gate runs but
-  governs nothing, so it shows execution, not real governance.
-- *Behaviour:* a minimal real app with a spec, a failing→passing test wired into
-  the `tests` check, and at least one T2 path (e.g. a migration) so tier
-  escalation is demonstrated on real code.
-- *Acceptance:* `leitwerk verify` on the example runs actual tests (not skips)
-  and a deliberately broken change turns it red.
-- *Roles/skills:* `leitwerk-spec`, `leitwerk-build`, `test-engineer`.
-
 **M1.3 · selftest-coverage** · tier **T2**
 - *Problem:* `selftest` covers four tier assertions and one gate run; `init`,
   `drift`, `checks_for_tier`, the glob-engine edge cases, and error paths are
@@ -68,19 +45,6 @@ before making it broadly adoptable.
 - *Behaviour:* extend the CLI's golden suite to cover glob edge cases (`**/`
   optional segment, catch-all), `leitwerk init` output, and non-zero exit paths.
 - *Acceptance:* mutating the glob translation or the tier table fails `selftest`.
-
-**M1.4 · spec-lifecycle** · tier **T0/T1**
-- *Problem:* specs and plans accumulate monotonically and change records read as
-  if current. `Status:` lines and the archive convention exist (templates,
-  `leitwerk-review` step 6), but no tooling knows about them.
-- *Behaviour:* `leitwerk/specs/archive/` is recognized: `drift` (M1.1) ignores
-  archived specs; a grooming ("dreaming") pass — part of review at landing plus
-  a periodic sweep — merges landed change-specs into living specs / decisions of
-  record and moves them to the archive.
-- *Acceptance:* an archived spec no longer counts as active anywhere; a landed
-  but unarchived plan is flagged.
-- *Roles/skills:* `leitwerk-review` (landing step), `architect` (what counts as
-  durable content).
 
 **M1.5 · bugfix-workflow** · tier **T1** (`bindings/*/skills`, templates)
 - *Problem:* whitepaper §8.3 defines workflow C (reproduce → localize → pin with
@@ -244,7 +208,26 @@ constraint.
   `.claude/workflows/leitwerk-review.mjs`; review scales by tier; workflow
   verification is soft, the external gate stays authoritative. See
   `leitwerk/specs/archive/workflow-orchestration.md` and the constitution's decisions.
-  A JS syntax check for workflow scripts in the gate is a small open follow-up.
+  (The JS syntax check for workflow scripts landed — `selftest` §9; see
+  `leitwerk/specs/archive/workflow-syntax-check.md`.)
+- **M1.1 · drift-detection — done (2026-07-20).** `drift` is real: specs declare
+  `## Anchors` (`path`/`path#symbol`); unresolved anchors are red, one-sided
+  spec/code change is red under a diff base, archived specs are ignored, and
+  anchor paths are confined (untrusted input). See
+  `leitwerk/specs/archive/drift-detection.md`.
+- **M1.2 · reference-app-real — done (2026-07-20).** `examples/reference-app` is
+  a minimal Go app with a spec, a real test the gate runs, and a T2 migration;
+  `selftest` §4 runs its tests and scenario `s6` proves broken→red. Unblocks
+  M1.5. See `leitwerk/specs/archive/reference-app-real.md`.
+- **M1.4 · spec-lifecycle — done (2026-07-20).** Terminal states enforced by the
+  `lifecycle` check, archived specs ignored by `drift` (via M1.1), the landing
+  "dreaming" pass practiced at review; a mechanized periodic sweep stays a
+  practice, not a tool. See `leitwerk/specs/archive/lifecycle-check.md` and the
+  constitution's decisions.
+- **Bash portability & workflow syntax (2026-07-20).** The gate's own checks run
+  on macOS bash 3.2 (no `mapfile`), and `selftest` syntax-checks workflow
+  `.mjs`. See `leitwerk/specs/archive/bash-portability.md` and
+  `leitwerk/specs/archive/workflow-syntax-check.md`.
 
 ## Not planned (explicit non-goals for now)
 - A bespoke spec DSL — specs stay Markdown.

@@ -66,8 +66,9 @@ the CLI golden behaviour (`selftest`) holds.
 
 ## Roles in play
 `architect` for CLI/structure changes, `test-engineer` to extend `selftest` when
-CLI behaviour changes, `scout` for read-only retrieval. No `security-reviewer`
-until the CLI handles untrusted input.
+CLI behaviour changes, `scout` for read-only retrieval. `security-reviewer` now
+applies to gate code that reads untrusted input: `drift` parses spec content
+(2026-07-20, M1.1), so a change to input-parsing gate code gets a security lens.
 
 ## Decisions of record
 - 2026-07-19: Aligned with Anthropic's Claude Code steering guidance. Absolute
