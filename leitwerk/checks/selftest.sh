@@ -234,5 +234,16 @@ else
   echo "FAIL: core/checks/drift.sh missing or not executable" >&2; fail=1
 fi
 
-[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle + drift)"
+# 8. The gate's own checks must run on the stock macOS shell (bash 3.2): no
+#    bash-4 array builtins (mapfile/readarray) in any check — a portable
+#    while-read loop is required instead (see
+#    leitwerk/specs/archive/bash-portability.md). Environment-independent guard;
+#    selftest.sh itself is excluded (it names the builtins here).
+mf="$(grep -rnE '(^|[^[:alnum:]_])(mapfile|readarray)([[:space:]]|$)' leitwerk/checks core/checks 2>/dev/null | grep -v '/selftest\.sh:' || true)"
+if [ -n "$mf" ]; then
+  echo "FAIL: a check uses a bash-4 array builtin — use a portable while-read loop:" >&2
+  echo "$mf" >&2; fail=1
+fi
+
+[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle + drift + portability)"
 exit "$fail"

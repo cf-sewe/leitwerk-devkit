@@ -5,7 +5,10 @@
 # never passes vacuously. Exit 0 = all parse, 1 = a file is invalid, 2 = none.
 set -euo pipefail
 
-mapfile -t files < <(find . -type f -name '*.json' \
+# Portable list collection (no `mapfile`, a bash-4 builtin absent on macOS's
+# stock bash 3.2): a while-read loop appending to an array works on bash 3.2+.
+files=()
+while IFS= read -r f; do files+=("$f"); done < <(find . -type f -name '*.json' \
   -not -path './node_modules/*' -not -path './.git/*' | sort)
 
 [ "${#files[@]}" -gt 0 ] || { echo "no JSON files found"; exit 2; }

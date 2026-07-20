@@ -9,17 +9,19 @@ set -euo pipefail
 # skipped, which would let the gate report clean without checking it. The compiled
 # gate binary (core/bin/leitwerk) is a build artifact, not a script, so it is
 # excluded from the shebang scan; the checks it orchestrates are still Bash.
-mapfile -t scripts < <(
-  {
-    find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './.git/*'
-    while IFS= read -r f; do
-      IFS= read -r first < "$f" 2>/dev/null || continue
-      case "$first" in
-        '#!'*bash*|'#!'*/sh|'#!'*' sh') echo "$f" ;;
-      esac
-    done < <(find . -type f ! -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -not -path './core/bin/leitwerk')
-  } | sort -u
-)
+# Portable list collection: no `mapfile` (a bash-4 builtin absent on bash 3.2),
+# and no `case` nested inside a process substitution (bash 3.2 mis-parses that).
+# Two disjoint sources appended at the top level: every *.sh, then extensionless
+# scripts detected by shebang. Each find is sorted for deterministic order.
+scripts=()
+while IFS= read -r s; do scripts+=("$s"); done < <(
+  find . -type f -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' | sort)
+while IFS= read -r f; do
+  IFS= read -r first < "$f" 2>/dev/null || continue
+  case "$first" in
+    '#!'*bash*|'#!'*/sh|'#!'*' sh') scripts+=("$f") ;;
+  esac
+done < <(find . -type f ! -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -not -path './core/bin/leitwerk' | sort)
 
 [ "${#scripts[@]}" -gt 0 ] || { echo "no shell scripts found"; exit 2; }
 
