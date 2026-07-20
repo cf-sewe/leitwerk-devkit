@@ -38,13 +38,7 @@ before making it broadly adoptable.
 
 ### Milestone 1 — make the framework's claims true
 
-**M1.3 · selftest-coverage** · tier **T2**
-- *Problem:* `selftest` covers four tier assertions and one gate run; `init`,
-  `drift`, `checks_for_tier`, the glob-engine edge cases, and error paths are
-  untested.
-- *Behaviour:* extend the CLI's golden suite to cover glob edge cases (`**/`
-  optional segment, catch-all), `leitwerk init` output, and non-zero exit paths.
-- *Acceptance:* mutating the glob translation or the tier table fails `selftest`.
+_Complete — all items landed; see "Recently decided (done)" below._
 
 ### Milestone 2 — make it adoptable
 
@@ -217,6 +211,12 @@ constraint.
   method, proven by `examples/scenarios/s7-bugfix.sh` — a defect that escapes the
   suite stays green until a regression test pins it (gate red), then the fix
   greens it. See `leitwerk/specs/archive/bugfix-workflow.md`.
+- **M1.3 · selftest-coverage — done (2026-07-20).** Acceptance was already met by
+  the Go suite `selftest` §0 runs (mutating the glob translation or the tier
+  table fails `go test`); this hardened the real residuals — the shipped **T1**
+  checks line (an agent-editable file, previously unpinned), `[paths]`
+  first-match ordering, the observable `verify` `checks:` line, and the CLI's
+  T1 fallback. See `leitwerk/specs/archive/selftest-coverage.md`.
 - **Bash portability & workflow syntax (2026-07-20).** The gate's own checks run
   on macOS bash 3.2 (no `mapfile`), and `selftest` syntax-checks workflow
   `.mjs`. See `leitwerk/specs/archive/bash-portability.md` and

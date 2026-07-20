@@ -131,6 +131,12 @@ func TestShippedDefaults(t *testing.T) {
 		"infra/main.tf":         "T2",
 		"docs/guide.md":         "T0",
 		"src/app.py":            "T1",
+		// First-match ordering + glob-family coverage (M1.3): these exercise the
+		// shipped [paths] ORDER, which the four above do not. A reorder that
+		// reclassified them must fail here.
+		"docs/schema.sql": "T0", // docs/** precedes **/*.sql — first match wins
+		"k8s/deploy.yaml": "T2", // **/*.yaml
+		"modules/net.tf":  "T2", // **/*.tf (not under infra/**)
 	} {
 		if got, _ := tr.TierForPath(path); got != want {
 			t.Errorf("shipped TierForPath(%q) = %q, want %q", path, got, want)

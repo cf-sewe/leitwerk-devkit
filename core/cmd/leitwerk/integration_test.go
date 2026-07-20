@@ -94,6 +94,7 @@ func runBin(t *testing.T, bin, dir string, args ...string) (int, string, string)
 	t.Helper()
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
+	cmd.Env = scrubbedEnv() // hermetic: no ambient LEITWERK_* override leaks in
 	var out, errb strings.Builder
 	cmd.Stdout = &out
 	cmd.Stderr = &errb
@@ -108,6 +109,19 @@ func runBin(t *testing.T, bin, dir string, args ...string) (int, string, string)
 		}
 	}
 	return code, out.String(), errb.String()
+}
+
+// scrubbedEnv is the parent environment with every LEITWERK_* override removed, so
+// integration tests exercise the shipped defaults / local fixtures deterministically
+// regardless of ambient config (selftest.sh itself exports LEITWERK_TIERS).
+func scrubbedEnv() []string {
+	var out []string
+	for _, kv := range os.Environ() {
+		if !strings.HasPrefix(kv, "LEITWERK_") {
+			out = append(out, kv)
+		}
+	}
+	return out
 }
 
 func TestIntegrationTierMapping(t *testing.T) {
@@ -177,6 +191,9 @@ func TestIntegrationInit(t *testing.T) {
 	code, out, _ := runBin(t, installBin, t.TempDir(), "init", dir)
 	if code != 0 {
 		t.Fatalf("init exit = %d\n%s", code, out)
+	}
+	if !strings.Contains(out, "scaffolded") { // the observable init-output contract (main.go)
+		t.Errorf("init output missing the 'scaffolded …' banner:\n%s", out)
 	}
 
 	overwritten := []string{"leitwerk/constitution.md", "leitwerk/tiers.conf"}
@@ -277,6 +294,65 @@ func TestIntegrationEmbedFallback(t *testing.T) {
 	}
 	if !strings.Contains(out, "gate: PASS") {
 		t.Errorf("embed verify expected PASS:\n%s", out)
+	}
+}
+
+// checksLine returns the space-separated check list from verify's "checks:" line
+// (the documented contract of which checks a tier runs), or "" if absent.
+func checksLine(out string) string {
+	for _, ln := range strings.Split(out, "\n") {
+		if strings.HasPrefix(ln, "checks:") {
+			return strings.TrimSpace(strings.TrimPrefix(ln, "checks:"))
+		}
+	}
+	return ""
+}
+
+// TestIntegrationVerifyChecksLine pins the observable checks-line contract: the
+// built binary, against the shipped defaults, lists exactly the tier's checks —
+// cumulative and in file order. TestChecksForTier covers the function; this
+// covers what the user actually sees, and catches a reorder/trim of the shipped
+// [tiers] table that the function test on synthetic data would not.
+func TestIntegrationVerifyChecksLine(t *testing.T) {
+	dir := t.TempDir() // empty + LEITWERK_* scrubbed: shipped defaults next to installBin
+	// Each tier's own line, verbatim and cumulative (T1/T2 are independent lines in
+	// the file — cumulativeness is a convention ChecksForTier does not enforce — so
+	// each is pinned separately; T1 is the default, most-used tier).
+	cases := map[string]string{
+		"T0": "lint",
+		"T1": "lint types tests drift",
+		"T2": "lint types tests drift sast erosion",
+	}
+	for tier, want := range cases {
+		// The checks: line is printed before any check runs, so it is deterministic
+		// regardless of which checks skip; the run's exit code is not asserted here
+		// (it depends on which analysers happen to be installed).
+		_, out, errb := runBin(t, installBin, dir, "verify", "--tier", tier)
+		if got := checksLine(out); got != want {
+			t.Errorf("verify %s checks line = %q, want %q\n%s%s", tier, got, want, out, errb)
+		}
+	}
+}
+
+// TestIntegrationTierFallbackT1 drives main.go's `if !ok { t = "T1" }` fallback,
+// unreachable with the shipped catch-all `*`: a [paths] table with no catch-all
+// leaves an unmatched path classified T1 (the documented default).
+func TestIntegrationTierFallbackT1(t *testing.T) {
+	dir := t.TempDir()
+	conf := filepath.Join(dir, "leitwerk", "tiers.conf")
+	if err := os.MkdirAll(filepath.Dir(conf), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(conf, []byte("[paths]\ndocs/** = T0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// `x.tf` matches the SHIPPED **/*.tf (T2) but NOT this fixture (docs/** only), so
+	// a result of T1 proves BOTH that the local fixture loaded AND that main.go's
+	// no-match fallback fired. A regression that ignored the fixture — or an ambient
+	// LEITWERK_TIERS — would yield T2, making this a discriminating oracle rather
+	// than one that passes under the shipped catch-all too.
+	if code, out, errb := runBin(t, installBin, dir, "tier", "x.tf"); code != 0 || strings.TrimSpace(out) != "T1" {
+		t.Errorf("no-catch-all fallback tier x.tf = %q (exit %d), want T1\n%s", strings.TrimSpace(out), code, errb)
 	}
 }
 
