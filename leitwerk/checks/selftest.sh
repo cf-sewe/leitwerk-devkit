@@ -245,5 +245,36 @@ if [ -n "$mf" ]; then
   echo "$mf" >&2; fail=1
 fi
 
-[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle + drift + portability)"
+# 9. Workflow scripts are valid JavaScript. .claude/workflows/*.mjs and the
+#    shipped template core/templates/workflows/*.mjs run inside Claude Code's
+#    async wrapper (top-level await/return, one `export const meta`), so a plain
+#    `node --check` misreads them. Mirror the runtime: strip the leading `export`
+#    and wrap the body in an async function, then syntax-check that. A malformed
+#    workflow would otherwise fail only when a human invokes it. Node is resolved
+#    via mise then PATH; absent node is a skip-with-note, never a faked result.
+#    See leitwerk/specs/archive/workflow-syntax-check.md.
+if command -v mise >/dev/null 2>&1 && mise exec -- node --version >/dev/null 2>&1; then
+  NODE=(mise exec -- node)
+elif command -v node >/dev/null 2>&1 && node --version >/dev/null 2>&1; then
+  NODE=(node)
+else
+  NODE=()
+fi
+if [ "${#NODE[@]}" -gt 0 ]; then
+  wf_found=0
+  while IFS= read -r mjs; do
+    wf_found=1
+    wf_dir="$(mktemp -d)"
+    { echo 'async function __leitwerk_wf__() {'; sed -E 's/^export ([a-z])/\1/' "$mjs"; echo; echo '}'; } > "$wf_dir/wf.js"
+    if ! wf_err="$("${NODE[@]}" --check "$wf_dir/wf.js" 2>&1)"; then
+      echo "FAIL: workflow syntax error in $mjs:" >&2; echo "$wf_err" >&2; fail=1
+    fi
+    rm -rf "$wf_dir"
+  done < <(find .claude/workflows core/templates/workflows -type f -name '*.mjs' 2>/dev/null | sort)
+  [ "$wf_found" -eq 1 ] || echo "note: no workflow .mjs found to syntax-check" >&2
+else
+  echo "note: node not available; skipped workflow .mjs syntax check" >&2
+fi
+
+[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle + drift + portability + workflows)"
 exit "$fail"
