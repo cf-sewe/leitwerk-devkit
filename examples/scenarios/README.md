@@ -20,6 +20,7 @@ make -C ../../core build
 | s3 | human-owned-guard | `leitwerk guard` blocks (`exit 3`) edits to human-owned files (constitution, tiers.conf) and allows ordinary files. |
 | s4 | skip-honesty | A check with nothing to run reports a visible skip, never a fake pass; the gate stays green but says so. |
 | s5 | local-override | A repo-local `leitwerk/checks/<name>.sh` overrides the built-in check of the same name. |
+| s6 | reference-app | The bundled `examples/reference-app` runs real Go tests (not a skip) and a deliberately broken change turns the gate red. Copies the app to a throwaway dir; skips cleanly if no Go toolchain is present. |
 
 Conventions:
 

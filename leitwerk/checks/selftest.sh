@@ -63,12 +63,19 @@ if ! diff -q core/templates/workflows/leitwerk-review.mjs .claude/workflows/leit
   echo "FAIL: review workflow template and .claude/workflows/ copy diverged" >&2; fail=1
 fi
 
-# 4. The gate runs green on the bundled example (proves end-to-end execution).
-if ( cd examples/reference-app && "$CLI" verify --tier T0 >/dev/null 2>&1 ); then
-  :
-else
-  echo "FAIL: gate not green on reference-app" >&2; fail=1
+# 4. The gate runs green on the bundled example AND runs its real Go tests there
+#    (not a skip): the reference-app is a spec-anchored Go app with a T2
+#    migration (M1.2). Run in place at T1 so mise resolves the repo's pinned Go
+#    toolchain; assert the tests check actually executed.
+ra_rc=0
+ra_out="$( cd examples/reference-app && "$CLI" verify --tier T1 2>&1 )" || ra_rc=$?
+if [ "$ra_rc" -ne 0 ]; then
+  echo "FAIL: gate not green on reference-app at T1" >&2; echo "$ra_out" >&2; fail=1
 fi
+case "$ra_out" in
+  *"go test green"*) : ;;
+  *) echo "FAIL: reference-app did not run real tests (expected 'go test green')" >&2; fail=1 ;;
+esac
 
 # 5. The documented scenarios hold (examples/scenarios/ are executable
 #    documentation of the guarantees; a regression turns this check red).
