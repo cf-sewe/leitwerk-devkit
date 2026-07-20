@@ -28,8 +28,13 @@ a prediction; the CI run is the record. Do not merge on a red gate.
    Verify every file/symbol reference against the code before it enters the
    plan; keep each step's status line current (`[x]` done, `[~]` deviated —
    one line why) so a cold session can resume from the plan.
-3. **Write the oracle before new behaviour.** Bugs get a failing regression test
-   first; untested legacy gets characterization tests before it is touched.
+3. **Write the oracle before you change code.** New behaviour gets its test
+   first. A **bugfix** takes the lightest safe path (Workflow C): reproduce the
+   defect, pin it with a regression test that fails *before* the fix (plus
+   characterization tests around the touched code), then fix at the change's
+   tier — the failing test is the anchor, so no full spec is needed unless the
+   fix changes the contract. Untested legacy gets characterization tests before
+   it is touched.
 4. **Verify at the step's tier.** `leitwerk tier <path>` tells you the tier.
 5. **Surface drift, do not resolve it.** Declare the code a spec governs under
    its `## Anchors` section (`path` / `path#symbol`); the `drift` check goes red

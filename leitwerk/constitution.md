@@ -144,3 +144,13 @@ applies to gate code that reads untrusted input: `drift` parses spec content
   gone. Auto-provisioning the diff base (CI / `verify --auto`) and a
   living-contract exemption for the one-sided check are deferred to M2.4 / M2.3.
   See `leitwerk/specs/archive/drift-detection.md`.
+- 2026-07-20: The bugfix workflow (whitepaper §8.3, Workflow C) is a first-class
+  entry path, not role prose. The `leitwerk-fix` skill sequences reproduce → pin
+  (a failing regression test, sourced from the `test-engineer` charter) → fix at
+  the change's tier → gate → review proportional to risk; it composes the role
+  rather than restating it, and `bindings/open/AGENTS.md` mirrors the method for
+  open code. The claim is proven executably by
+  `examples/scenarios/s7-bugfix.sh`, which shows a defect the existing suite
+  misses staying green until the pin reds the gate and the fix greens it — so
+  "pin before you fix" is a runnable check, not advice. See
+  `leitwerk/specs/archive/bugfix-workflow.md`.

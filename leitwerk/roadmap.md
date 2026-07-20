@@ -46,19 +46,6 @@ before making it broadly adoptable.
   optional segment, catch-all), `leitwerk init` output, and non-zero exit paths.
 - *Acceptance:* mutating the glob translation or the tier table fails `selftest`.
 
-**M1.5 · bugfix-workflow** · tier **T1** (`bindings/*/skills`, templates)
-- *Problem:* whitepaper §8.3 defines workflow C (reproduce → localize → pin with
-  a failing test → fix at the diff's tier), but no skill implements it; bugfixes
-  run through `leitwerk-build` without the reproduce/pin prefix.
-- *Behaviour:* a bugfix entry path (own skill or a `leitwerk-build` variant):
-  reproduce the defect first, write the failing regression test plus
-  characterization tests around the touched code, then fix at the change's
-  tier. `bindings/open/AGENTS.md` mirrors the working method.
-- *Acceptance:* a documented run on `examples/reference-app` where a seeded bug
-  is reproduced, pinned by a failing test, fixed, and the gate goes green.
-  Depends on M1.2 (reference-app-real) for the substrate.
-- *Roles/skills:* `test-engineer` (the pin), `architect` (skill shape).
-
 ### Milestone 2 — make it adoptable
 
 **M2.1 · cli-publish** · tier **T1**
@@ -224,6 +211,12 @@ constraint.
   "dreaming" pass practiced at review; a mechanized periodic sweep stays a
   practice, not a tool. See `leitwerk/specs/archive/lifecycle-check.md` and the
   constitution's decisions.
+- **M1.5 · bugfix-workflow — done (2026-07-20).** Workflow C (whitepaper §8.3) is
+  a first-class entry path: the `leitwerk-fix` skill (reproduce → pin → fix at
+  tier, composing `test-engineer`), with `bindings/open/AGENTS.md` mirroring the
+  method, proven by `examples/scenarios/s7-bugfix.sh` — a defect that escapes the
+  suite stays green until a regression test pins it (gate red), then the fix
+  greens it. See `leitwerk/specs/archive/bugfix-workflow.md`.
 - **Bash portability & workflow syntax (2026-07-20).** The gate's own checks run
   on macOS bash 3.2 (no `mapfile`), and `selftest` syntax-checks workflow
   `.mjs`. See `leitwerk/specs/archive/bash-portability.md` and

@@ -1,9 +1,10 @@
 ---
 name: leitwerk-spec
 description: >
-  Turn a request, bug report, or idea into a spec that a change can be bound to.
-  Use before planning or building any non-trivial change. Produces the anchor the
-  gate and reviewers check against.
+  Turn a request, an idea, or a bug that needs a contract change into a spec a
+  change can be bound to. Use before planning or building any non-trivial change;
+  a routine bugfix uses leitwerk-fix instead. Produces the anchor the gate and
+  reviewers check against.
 allowed-tools: "Read Grep Glob Bash Write Edit Task"
 ---
 
