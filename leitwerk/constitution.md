@@ -132,3 +132,14 @@ until the CLI handles untrusted input.
   binding) surfaced by a `SessionStart` hook and presented by `leitwerk-review`
   as multiple-choice. The authority version is the "Decision routing" section
   above. See `leitwerk/specs/archive/decision-routing.md`.
+- 2026-07-20: Drift detection is real (M1.1). A spec declares the code it
+  governs in an `## Anchors` section (`path` / `path#symbol`, globs allowed);
+  the `drift` core check (wired at every tier) goes red when an anchor no longer
+  resolves and — when a diff base is provided — when anchored code changed while
+  its spec did not. It surfaces, never resolves; archived specs are ignored.
+  Anchor paths are confined to the repo because a spec is untrusted input — this
+  change crosses the "CLI handles untrusted input" line the "Roles in play" note
+  named, and a security pass hardened it. The placeholder that always passed is
+  gone. Auto-provisioning the diff base (CI / `verify --auto`) and a
+  living-contract exemption for the one-sided check are deferred to M2.4 / M2.3.
+  See `leitwerk/specs/archive/drift-detection.md`.

@@ -49,5 +49,14 @@ Tier (T0/T1/T2) and the reason. What is the worst case if this ships wrong?
 The concrete oracles that prove it: which tests/properties/contracts must pass.
 These become part of `leitwerk verify` for this area.
 
+## Anchors
+Optional — the code this spec governs, so `drift` can surface divergence. A list
+whose items each begin with a backtick-wrapped token: `path` or `path#symbol`
+(the path may be a glob). `drift` goes red if an anchor no longer resolves (path
+gone, glob unmatched, symbol absent) and — when a diff base is given — if
+anchored code changed in a range where this spec did not. Line numbers are not
+anchors (they churn without meaning). Omit the section if the spec governs no
+specific code yet.
+
 ## Out of scope
 What this change deliberately does not do.

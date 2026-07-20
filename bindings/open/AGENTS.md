@@ -31,8 +31,11 @@ a prediction; the CI run is the record. Do not merge on a red gate.
 3. **Write the oracle before new behaviour.** Bugs get a failing regression test
    first; untested legacy gets characterization tests before it is touched.
 4. **Verify at the step's tier.** `leitwerk tier <path>` tells you the tier.
-5. **Surface drift, do not resolve it.** If code and spec disagree and you can't
-   tell which is right, stop and flag it for a human.
+5. **Surface drift, do not resolve it.** Declare the code a spec governs under
+   its `## Anchors` section (`path` / `path#symbol`); the `drift` check goes red
+   when an anchor stops resolving, or (given a diff base) when anchored code
+   changed while its spec did not. If code and spec disagree and you can't tell
+   which is right, stop and flag it for a human.
 6. **Escalate decisions, not questions.** Ask the human only for intent, scope,
    and priorities; for anything that would weaken a guarantee (thresholds,
    checks, tiers); or to accept irreversible risk (T2 sign-off). Everything

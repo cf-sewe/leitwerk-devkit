@@ -14,7 +14,8 @@ generic. This spec anchors the repository to its own gate.
 - Changing a `core/bin`, `core/checks`, `core/cmd`, `core/internal` (or other Go
   source), or any `*.sh` path selects tier **T2**.
 - A T2 gate runs: `json` (all manifests parse), `shell` (`bash -n` + shellcheck
-  when present), `drift` (specs tracked), `selftest` (builds the Go CLI, runs its
+  when present), `drift` (spec `## Anchors` resolve against the code, and
+  one-sided spec/code change is surfaced when a diff base is given), `selftest` (builds the Go CLI, runs its
   unit + integration tests, re-asserts the external contract, and executes the
   documented scenarios in `examples/scenarios/`), `parity` (the guarantee stays
   in `core/`, stdlib-only; bindings delegate), `context` (always-on steering
@@ -38,6 +39,13 @@ of: a manifest is corrupted, a script has a syntax error, a tier boundary in
 `selftest.sh` regresses, or a landed spec record sits outside
 `leitwerk/specs/archive/`. Enforced locally by the Stop hook in `.claude/settings.json`
 and authoritatively by `.github/workflows/leitwerk.yml`.
+
+## Anchors
+The gate code this contract governs — a rename here without updating this spec
+surfaces as drift (the check dogfoods itself):
+- `core/internal/gate/verify.go#RunVerify`
+- `core/internal/gate/tiers.go#ChecksForTier`
+- `core/cmd/leitwerk/main.go#cmdVerify`
 
 ## Out of scope
 Wiring language-specific checks beyond the Go toolchain the gate itself needs,

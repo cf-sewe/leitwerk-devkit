@@ -36,6 +36,9 @@ the code; the gate keeps it honest.
    expect to touch) and state the worst case if it ships wrong.
 8. **Acceptance checks** — the concrete oracles (tests/properties/contracts) that
    will prove correctness. These become part of `leitwerk verify` for this area.
+9. **Anchors** (where the spec governs specific code) — list it under
+   `## Anchors` as `` `path` `` or `` `path#symbol` `` so `drift` surfaces
+   spec↔code divergence (a renamed symbol or moved code goes red).
 
 If the change reveals the spec was incomplete, update the spec in the same change
 — continuous bidirectional refinement. If code and spec disagree and you cannot

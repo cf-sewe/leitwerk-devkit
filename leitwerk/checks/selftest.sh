@@ -119,5 +119,113 @@ else
   echo "FAIL: leitwerk/checks/lifecycle.sh missing or not executable" >&2; fail=1
 fi
 
-[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle)"
+# 7. The drift check anchors specs to code (see
+#    leitwerk/specs/archive/drift-detection.md). One fixture per acceptance
+#    bullet: resolving anchors pass with the enriched summary; a renamed symbol
+#    and a missing path fail with a readable, located line; an out-of-repo
+#    anchor is refused (not probed); a broken anchor inside archive/ is ignored;
+#    a fenced example block is not parsed; a one-sided change fails when a diff
+#    base is given; an option-like base is refused; no specs dir skips.
+DR="$PWD/core/checks/drift.sh"
+if [ -x "$DR" ]; then
+  dr_tmp="$(mktemp -d)"
+  mkdir -p "$dr_tmp/specs/archive" "$dr_tmp/code"
+  printf 'package x\nfunc Alpha() {}\n' > "$dr_tmp/code/a.go"
+
+  # consistent: a path anchor and a symbol anchor both resolve, and the summary
+  # reports the anchor counts (not just the "spec(s) tracked" golden substring)
+  printf 'Status: active (2026-07-20)\n## Anchors\n- `code/a.go`\n- `code/a.go#Alpha`\n' > "$dr_tmp/specs/ok.md"
+  dr_rc=0
+  dr_out="$(cd "$dr_tmp" && LEITWERK_SPECS=specs "$DR" 2>&1)" || dr_rc=$?
+  assert "drift consistent fixture exit" 0 "$dr_rc"
+  case "$dr_out" in *"spec(s) tracked"*) : ;; *) echo "FAIL: drift green summary missing 'spec(s) tracked'" >&2; fail=1 ;; esac
+  case "$dr_out" in *"with anchors"*"anchor(s) resolve"*) : ;; *) echo "FAIL: drift summary did not report anchor counts" >&2; fail=1 ;; esac
+
+  # renamed/removed symbol -> red, with a line naming the spec:line, the word
+  # "anchor", and the missing symbol
+  printf 'Status: active (2026-07-20)\n## Anchors\n- `code/a.go#Renamed`\n' > "$dr_tmp/specs/ok.md"
+  dr_rc=0
+  dr_out="$(cd "$dr_tmp" && LEITWERK_SPECS=specs "$DR" 2>&1)" || dr_rc=$?
+  assert "drift missing-symbol exit" 1 "$dr_rc"
+  case "$dr_out" in *ok.md:*anchor*Renamed*) : ;; *) echo "FAIL: drift missing-symbol line lacks spec:line / anchor / symbol" >&2; fail=1 ;; esac
+
+  # missing path -> red
+  printf 'Status: active (2026-07-20)\n## Anchors\n- `code/gone.go`\n' > "$dr_tmp/specs/ok.md"
+  if (cd "$dr_tmp" && LEITWERK_SPECS=specs "$DR" >/dev/null 2>&1); then
+    echo "FAIL: drift green on a missing-path anchor" >&2; fail=1
+  fi
+
+  # an out-of-repo anchor is refused, not turned into a file-existence oracle
+  printf 'Status: active (2026-07-20)\n## Anchors\n- `/etc/hosts`\n' > "$dr_tmp/specs/ok.md"
+  dr_rc=0
+  dr_out="$(cd "$dr_tmp" && LEITWERK_SPECS=specs "$DR" 2>&1)" || dr_rc=$?
+  assert "drift absolute-anchor refused exit" 1 "$dr_rc"
+  case "$dr_out" in *"escapes the repo"*) : ;; *) echo "FAIL: drift did not refuse an out-of-repo (absolute) anchor" >&2; fail=1 ;; esac
+  printf 'Status: active (2026-07-20)\n## Anchors\n- `../../../../etc/hosts`\n' > "$dr_tmp/specs/ok.md"
+  if (cd "$dr_tmp" && LEITWERK_SPECS=specs "$DR" >/dev/null 2>&1); then
+    echo "FAIL: drift green on a ..-escaping anchor" >&2; fail=1
+  fi
+
+  # a broken anchor that lives in archive/ is ignored
+  printf 'Status: active (2026-07-20)\n## Anchors\n- `code/a.go`\n' > "$dr_tmp/specs/ok.md"
+  printf 'Status: landed (2026-07-19)\n## Anchors\n- `code/gone.go`\n' > "$dr_tmp/specs/archive/old.md"
+  if (cd "$dr_tmp" && LEITWERK_SPECS=specs "$DR" >/dev/null 2>&1); then :; else
+    echo "FAIL: drift red on a broken anchor inside archive/ (should be ignored)" >&2; fail=1
+  fi
+  command rm -f "$dr_tmp/specs/archive/old.md"
+
+  # a fenced ``` example anchor block (even with a broken path) is not parsed;
+  # only the spec's real ## Anchors section counts
+  {
+    printf 'Status: active (2026-07-20)\n\n```\n## Anchors\n- `code/example-only.go`\n```\n\n## Anchors\n- `code/a.go`\n'
+  } > "$dr_tmp/specs/ok.md"
+  if (cd "$dr_tmp" && LEITWERK_SPECS=specs "$DR" >/dev/null 2>&1); then :; else
+    echo "FAIL: drift parsed an anchor from inside a fenced code block" >&2; fail=1
+  fi
+
+  # no specs dir -> skip (exit 2), never a faked pass
+  dr_rc=0
+  (cd "$dr_tmp" && LEITWERK_SPECS=nowhere "$DR" >/dev/null 2>&1) || dr_rc=$?
+  assert "drift no-specs skip" 2 "$dr_rc"
+  command rm -rf "$dr_tmp"
+
+  # one-sided change (Part 2). The git fixture is built OUTSIDE the assertion so
+  # a setup failure cannot masquerade as the check passing: we capture the exit
+  # code and require exactly 1, and assert the line names the code and the spec.
+  if command -v git >/dev/null 2>&1; then
+    dg="$(mktemp -d)"
+    (
+      cd "$dg"
+      git init -q && git config user.email t@t && git config user.name t
+      mkdir -p specs code
+      printf 'Status: active (2026-07-20)\n## Anchors\n- `code/a.go`\n' > specs/x.md
+      printf 'package x\nfunc Alpha() {}\n' > code/a.go
+      git add -A && git commit -qm base
+      git rev-parse HEAD > base.txt
+      printf 'package x\nfunc Alpha() { return }\n' > code/a.go
+      git add -A && git commit -qm code-only
+    ) >/dev/null 2>&1
+    dg_base="$(cat "$dg/base.txt" 2>/dev/null || true)"
+    if [ -n "$dg_base" ]; then
+      dr_rc=0
+      dr_out="$(cd "$dg" && LEITWERK_SPECS=specs LEITWERK_DIFF_BASE="$dg_base" "$DR" 2>&1)" || dr_rc=$?
+      assert "drift one-sided change exit" 1 "$dr_rc"
+      case "$dr_out" in *"code/a.go changed"*"specs/x.md did not"*) : ;; *) echo "FAIL: drift one-sided line did not name the code and the spec" >&2; fail=1 ;; esac
+
+      # an option-like base is refused before it can reach git (no injected file,
+      # Part 2 skipped so the consistent fixture stays green)
+      dr_rc=0
+      (cd "$dg" && LEITWERK_SPECS=specs LEITWERK_DIFF_BASE='--output=INJECTED' "$DR" >/dev/null 2>&1) || dr_rc=$?
+      assert "drift option-like base refused exit" 0 "$dr_rc"
+      if [ -e "$dg/INJECTED...HEAD" ]; then echo "FAIL: drift let an option-like base reach git" >&2; fail=1; fi
+    else
+      echo "FAIL: drift one-sided git fixture failed to build" >&2; fail=1
+    fi
+    command rm -rf "$dg"
+  fi
+else
+  echo "FAIL: core/checks/drift.sh missing or not executable" >&2; fail=1
+fi
+
+[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle + drift)"
 exit "$fail"
