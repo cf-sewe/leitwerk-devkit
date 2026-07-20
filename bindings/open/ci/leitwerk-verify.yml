@@ -26,18 +26,18 @@ jobs:
       - name: Install leitwerk
         run: go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest
 
-      - name: Select tier from changed paths
-        id: tier
+      - name: Run the gate (tier auto-derived from the diff)
+        # `verify --auto` derives the highest blast-radius tier from the diff in
+        # the CLI itself — the shell rank loop this replaces now lives in one
+        # place. The base is a --base FLAG (tier selection only); `--auto` does
+        # not read LEITWERK_DIFF_BASE, so drift's one-sided check stays off until
+        # M2.3, which will set LEITWERK_DIFF_BASE (for drift, with the
+        # living-contract exemption) alongside this flag — two explicit signals.
         run: |
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
-          highest=T0
-          rank() { case "$1" in T0) echo 0;; T1) echo 1;; T2) echo 2;; esac; }
-          for f in $(git diff --name-only "$base"...HEAD); do
-            t=$(leitwerk tier "$f")
-            [ "$(rank "$t")" -gt "$(rank "$highest")" ] && highest="$t"
-          done
-          echo "tier=$highest" >> "$GITHUB_OUTPUT"
-          echo "Highest blast-radius tier in this change: $highest"
-
-      - name: Run the gate
-        run: leitwerk verify --tier "${{ steps.tier.outputs.tier }}"
+          if git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1; then
+            leitwerk verify --auto --base "$base"
+          else
+            echo "leitwerk: no resolvable diff base ('$base') — running the full gate"
+            leitwerk verify --tier T2
+          fi

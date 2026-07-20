@@ -356,7 +356,127 @@ func TestIntegrationTierFallbackT1(t *testing.T) {
 	}
 }
 
+// TestIntegrationVerifyAuto exercises `verify --auto`: tier derivation from a git
+// diff (the roadmap's acceptance — docs-only → T0, a migration → T2) plus the
+// usage-error paths that must never silently under-select a tier.
+func TestIntegrationVerifyAuto(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	dir := t.TempDir()
+	gitEnv := append(scrubbedEnv(),
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t",
+		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+	git := func(args ...string) {
+		t.Helper()
+		c := exec.Command("git", args...)
+		c.Dir = dir
+		c.Env = gitEnv
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	git("init", "-q")
+	writeFile(t, dir, "docs/readme.md", "# base\n")
+	git("add", "-A")
+	git("commit", "-qm", "base")
+	rp := exec.Command("git", "rev-parse", "HEAD")
+	rp.Dir = dir
+	rp.Env = gitEnv
+	baseOut, err := rp.Output()
+	if err != nil {
+		t.Fatalf("rev-parse: %v", err)
+	}
+	base := strings.TrimSpace(string(baseOut))
+
+	// A docs-only change since base derives T0. Asserting the file count too keeps
+	// this a real oracle (an empty diff would also print T0).
+	writeFile(t, dir, "docs/more.md", "more\n")
+	git("add", "-A")
+	git("commit", "-qm", "docs")
+	if _, out, errb := runBin(t, installBin, dir, "verify", "--auto", "--base", base); !strings.Contains(out, "auto: tier T0") || !strings.Contains(out, "1 changed file(s)") {
+		t.Errorf("docs-only --auto: want 'auto: tier T0' with 1 changed file\n%s%s", out, errb)
+	}
+
+	// Adding a migration raises the derived tier to T2 (the migration decides), and
+	// --auto must actually RUN that tier — assert the checks line is the T2 list.
+	writeFile(t, dir, "db/migrations/001_x.sql", "create table x;\n")
+	git("add", "-A")
+	git("commit", "-qm", "migration")
+	_, out, errb := runBin(t, installBin, dir, "verify", "--auto", "--base", base)
+	if !strings.Contains(out, "auto: tier T2") {
+		t.Errorf("migration --auto: want 'auto: tier T2'\n%s%s", out, errb)
+	}
+	if got := checksLine(out); got != "lint types tests drift sast erosion" {
+		t.Errorf("migration --auto ran checks %q, want the T2 list\n%s", got, out)
+	}
+
+	// Working-tree mode (no --base): an UNTRACKED migration is seen via
+	// `git ls-files --others` and derives T2 — the path the local Stop hook runs,
+	// which the --base cases above never exercise.
+	writeFile(t, dir, "db/migrations/003_untracked.sql", "create table z;\n") // not git-added
+	if _, out, errb := runBin(t, installBin, dir, "verify", "--auto"); !strings.Contains(out, "auto: tier T2") {
+		t.Errorf("working-tree --auto (untracked migration): want 'auto: tier T2'\n%s%s", out, errb)
+	}
+
+	// Usage errors (exit 2), each with a DISCRIMINATING message so a guard swap
+	// that still exits 2 for a different reason is caught. A precondition failure
+	// never under-selects a tier.
+	for _, c := range []struct {
+		name, wantErr string
+		args          []string
+		dir           string
+	}{
+		{"--auto with --tier", "mutually exclusive", []string{"verify", "--auto", "--tier", "T2"}, dir},
+		{"option-like base", "looks like an option", []string{"verify", "--auto", "--base", "--output=INJECTED"}, dir},
+		{"non-commit base", "not a resolvable commit", []string{"verify", "--auto", "--base", "deadbeef"}, dir},
+		{"outside a git work tree", "not inside a git work tree", []string{"verify", "--auto"}, t.TempDir()},
+	} {
+		code, _, errb := runBin(t, installBin, c.dir, c.args...)
+		if code != 2 {
+			t.Errorf("%s: exit = %d, want 2\n%s", c.name, code, errb)
+		}
+		if !strings.Contains(errb, c.wantErr) {
+			t.Errorf("%s: stderr = %q, want it to contain %q", c.name, errb, c.wantErr)
+		}
+	}
+	// The option-like base must be refused BEFORE git runs — no leaked --output file.
+	if _, err := os.Stat(filepath.Join(dir, "INJECTED")); err == nil {
+		t.Errorf("option-like base leaked to git: an INJECTED file was created")
+	}
+}
+
+// TestIntegrationVerifyAutoNoCommits covers the onboarding path: a fresh repo with
+// no HEAD must still derive a tier from the working tree (never block with exit 2).
+func TestIntegrationVerifyAutoNoCommits(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	dir := t.TempDir()
+	c := exec.Command("git", "init", "-q")
+	c.Dir = dir
+	c.Env = scrubbedEnv()
+	if out, err := c.CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	writeFile(t, dir, "db/migrations/001.sql", "create table x;\n") // untracked, no commits
+	if code, out, errb := runBin(t, installBin, dir, "verify", "--auto"); code == 2 || !strings.Contains(out, "auto: tier T2") {
+		t.Errorf("no-commits --auto: exit %d, want a T2 derivation (not a block)\n%s%s", code, out, errb)
+	}
+}
+
 // --- small file helpers ---
+
+func writeFile(t *testing.T, dir, rel, body string) {
+	t.Helper()
+	p := filepath.Join(dir, rel)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func copyFile(src, dst string, perm os.FileMode) error {
 	in, err := os.Open(src)

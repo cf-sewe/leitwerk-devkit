@@ -31,6 +31,7 @@ binary, so the strongest guarantee never depends on a particular agent.
 
 Subcommands:
   verify [--tier T0|T1|T2]   Run the checks selected for a blast-radius tier.
+  verify --auto [--base REF] Derive the tier from the git diff, then run it.
   tier <path>                Print the blast-radius tier for a changed path.
   guard <path>               Exit non-zero if a path is human-owned (see below).
   drift                      Surface spec<->code divergence (does not resolve it).
@@ -134,7 +135,9 @@ func loadEnv() env {
 }
 
 func cmdVerify(args []string, e env, stdout, stderr io.Writer, color bool) int {
-	tier := "T1"
+	tier := ""
+	auto := false
+	base := ""
 	for i := 0; i < len(args); {
 		a := args[i]
 		switch {
@@ -147,9 +150,37 @@ func cmdVerify(args []string, e env, stdout, stderr io.Writer, color bool) int {
 		case strings.HasPrefix(a, "--tier="):
 			tier = strings.TrimPrefix(a, "--tier=")
 			i++
+		case a == "--auto":
+			auto = true
+			i++
+		case a == "--base":
+			if i+1 >= len(args) {
+				return usage(stderr, "--base needs a value")
+			}
+			base = args[i+1]
+			i += 2
+		case strings.HasPrefix(a, "--base="):
+			base = strings.TrimPrefix(a, "--base=")
+			i++
 		default:
 			return usage(stderr, "unknown verify option: "+a)
 		}
+	}
+	if auto && tier != "" {
+		return usage(stderr, "--auto and --tier are mutually exclusive")
+	}
+	if base != "" && !auto {
+		return usage(stderr, "--base requires --auto")
+	}
+	if auto {
+		derived, code := autoTier(base, e.tiers, stdout, stderr)
+		if code != 0 {
+			return code
+		}
+		tier = derived
+	}
+	if tier == "" {
+		tier = "T1" // default when neither --tier nor --auto is given
 	}
 	return gate.RunVerify(gate.VerifyOptions{
 		Tier:      tier,
@@ -160,6 +191,89 @@ func cmdVerify(args []string, e env, stdout, stderr io.Writer, color bool) int {
 		Stderr:    stderr,
 		Color:     color,
 	})
+}
+
+// autoTier derives the blast-radius tier from the changed files for `--auto`.
+// The base comes ONLY from the --base flag (empty ⇒ working-tree mode). It does
+// NOT read LEITWERK_DIFF_BASE: that env var is drift's Part-2 signal, and an
+// ambient value must never silently flip `--auto` from working-tree to
+// committed-range semantics (which would hide a turn's uncommitted edits and
+// under-select the tier). Returns (tier, 0), or ("", 2) after a usage error —
+// a precondition failure (no git, bad base) never silently under-selects.
+func autoTier(base string, tiers *gate.Tiers, stdout, stderr io.Writer) (string, int) {
+	files, err := changedFiles(base)
+	if err != nil {
+		return "", usage(stderr, "verify --auto: "+err.Error()+"; pass --tier explicitly")
+	}
+	tier, deciding := gate.HighestTier(tiers, files)
+	if deciding != "" {
+		fmt.Fprintf(stdout, "auto: tier %s (%s); %d changed file(s)\n", tier, deciding, len(files))
+	} else {
+		fmt.Fprintf(stdout, "auto: tier %s; %d changed file(s)\n", tier, len(files))
+	}
+	return tier, 0
+}
+
+// changedFiles returns the paths changed relative to base (a three-dot range from
+// the merge-base, as CI uses), or — when base is empty — the working-tree changes
+// plus untracked files (what a local Stop hook sees before a commit). A base that
+// looks like an option or is not a resolvable commit is refused, never
+// interpolated as a git option. Requires a git work tree.
+func changedFiles(base string) ([]string, error) {
+	if _, err := exec.LookPath("git"); err != nil {
+		return nil, errors.New("git not found")
+	}
+	if out, err := exec.Command("git", "rev-parse", "--is-inside-work-tree").Output(); err != nil || strings.TrimSpace(string(out)) != "true" {
+		return nil, errors.New("not inside a git work tree")
+	}
+	if base != "" {
+		if strings.HasPrefix(base, "-") {
+			return nil, fmt.Errorf("base %q looks like an option, not a ref", base)
+		}
+		if err := exec.Command("git", "rev-parse", "--verify", "--quiet", base+"^{commit}").Run(); err != nil {
+			return nil, fmt.Errorf("base %q is not a resolvable commit", base)
+		}
+		// `--` ends options/pathspec: defence-in-depth so the verified range can
+		// never be reparsed as an option even if this construction changes.
+		out, err := exec.Command("git", "diff", "--name-only", base+"...HEAD", "--").Output()
+		if err != nil {
+			return nil, fmt.Errorf("git diff against %q failed", base)
+		}
+		return splitNonEmptyLines(out), nil
+	}
+	// Working-tree mode. With no commits yet (no HEAD), `git diff HEAD` errors, so
+	// treat every tracked + untracked file as the changed set rather than blocking
+	// a fresh repo's first turns — still never under-selecting (a new T2 file is
+	// classified T2).
+	if err := exec.Command("git", "rev-parse", "--verify", "--quiet", "HEAD").Run(); err != nil {
+		var files []string
+		if tracked, e := exec.Command("git", "ls-files").Output(); e == nil {
+			files = append(files, splitNonEmptyLines(tracked)...)
+		}
+		if others, e := exec.Command("git", "ls-files", "--others", "--exclude-standard").Output(); e == nil {
+			files = append(files, splitNonEmptyLines(others)...)
+		}
+		return files, nil
+	}
+	out, err := exec.Command("git", "diff", "--name-only", "HEAD", "--").Output()
+	if err != nil {
+		return nil, errors.New("git diff against HEAD failed")
+	}
+	files := splitNonEmptyLines(out)
+	if others, e := exec.Command("git", "ls-files", "--others", "--exclude-standard").Output(); e == nil {
+		files = append(files, splitNonEmptyLines(others)...)
+	}
+	return files, nil
+}
+
+func splitNonEmptyLines(b []byte) []string {
+	var out []string
+	for _, ln := range strings.Split(string(b), "\n") {
+		if ln = strings.TrimSpace(ln); ln != "" {
+			out = append(out, ln)
+		}
+	}
+	return out
 }
 
 // cmdDrift runs the built-in drift check directly (bypassing the repo-local

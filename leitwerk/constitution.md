@@ -154,3 +154,16 @@ applies to gate code that reads untrusted input: `drift` parses spec content
   misses staying green until the pin reds the gate and the fix greens it — so
   "pin before you fix" is a runnable check, not advice. See
   `leitwerk/specs/archive/bugfix-workflow.md`.
+- 2026-07-20: Diff-derived tier selection (M2.4). `leitwerk verify --auto`
+  computes the highest blast-radius tier from the git diff inside the CLI and
+  runs it, replacing the shell rank-loop CI duplicated — so the Stop hook and CI
+  share one implementation (a binding reimplements less of the gate, not more).
+  The diff base is taken ONLY from the `--base` flag, never `LEITWERK_DIFF_BASE`:
+  that env var is drift's Part-2 signal, and an ambient value must not silently
+  flip `--auto` from working-tree to committed-range and hide uncommitted work.
+  Precondition failures (no git, unresolvable base) error rather than fall back
+  to a low tier — the gate never silently under-verifies. This repo's own Stop
+  hook stays pinned T2 (highest-stakes); the plugin ships `--auto`. Drift's
+  one-sided check and its living-contract exemption remain deferred to M2.3,
+  which will set `LEITWERK_DIFF_BASE` alongside the flag. See
+  `leitwerk/specs/archive/verify-auto.md`.

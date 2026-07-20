@@ -75,19 +75,6 @@ _Complete — all items landed; see "Recently decided (done)" below._
   confirm tier selection from the diff works on GitHub's runner.
 - *Acceptance:* a PR with a T2 change is blocked until the gate is green.
 
-**M2.4 · verify --auto** · tier **T2**
-- *Problem:* the Stop hook verifies at a static tier (`$LEITWERK_TIER`, plugin
-  default T1; this repo pins T2) — it cannot see the change's real blast
-  radius. A T2 change can end a turn having passed only T1 locally; a docs-only
-  turn overpays. Only CI derives the tier from the diff.
-- *Behaviour:* `leitwerk verify --auto` computes the highest tier from the git
-  diff (same first-match rule CI uses) and runs that tier; the hook templates
-  and CI share it. Optional later extension: diff-signal triggers (auth paths →
-  security review) once the tier derivation is proven.
-- *Acceptance:* `selftest` covers tier derivation from a mixed diff (docs-only →
-  T0, one migration → T2); the scaffolded hook uses `--auto`.
-- *Roles/skills:* `architect` (diff-base semantics), `test-engineer`.
-
 ### Milestone 3 — verification depth
 
 **M3.1 · erosion-budgets** · tier **T2** — make `erosion.sh` enforce real
@@ -217,6 +204,13 @@ constraint.
   checks line (an agent-editable file, previously unpinned), `[paths]`
   first-match ordering, the observable `verify` `checks:` line, and the CLI's
   T1 fallback. See `leitwerk/specs/archive/selftest-coverage.md`.
+- **M2.4 · verify --auto — done (2026-07-20).** `leitwerk verify --auto` derives
+  the blast-radius tier from the git diff inside the CLI (`--base <ref>` for a
+  range, else working-tree ∪ untracked); the plugin Stop hook and CI use it (the
+  CI shell rank-loop is gone), while this repo's own hook stays pinned T2. The
+  base is flag-only — `--auto` does not read `LEITWERK_DIFF_BASE` — so an ambient
+  value can't flip its semantics; drift Part-2 wiring stays deferred to M2.3.
+  See `leitwerk/specs/archive/verify-auto.md`.
 - **Bash portability & workflow syntax (2026-07-20).** The gate's own checks run
   on macOS bash 3.2 (no `mapfile`), and `selftest` syntax-checks workflow
   `.mjs`. See `leitwerk/specs/archive/bash-portability.md` and

@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "leitwerk verify --tier ${LEITWERK_TIER:-T1} || exit 2",
+            "command": "if [ -n \"$LEITWERK_TIER\" ]; then leitwerk verify --tier \"$LEITWERK_TIER\"; else leitwerk verify --auto; fi || exit 2",
             "statusMessage": "Running the leitwerk gate before ending the turn...",
             "timeout": 600
           }
