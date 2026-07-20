@@ -3,10 +3,15 @@
 Status: active (YYYY-MM-DD) <!-- a plan is per-change and perishable: when every step has landed, mark it landed and move it to leitwerk/specs/archive/ -->
 
 The plan turns a spec into a sequence of gated steps. Each step is small enough
-to verify on its own and leaves the gate green.
+to verify on its own and leaves the gate green. File and symbol references are
+verified against the code before they enter the plan.
 
 ## Steps
-1. <step> — files touched, tier, which checks prove it.
+Step status: `[ ]` open · `[x]` done · `[~]` deviated — one line why. Kept
+current by whoever executes the steps; a cold session resumes from these lines.
+
+1. `[ ]` <step> — files touched, tier, which checks prove it. For T2 steps:
+   also the manual checks a human must eyeball.
 2. …
 
 ## Verification strategy

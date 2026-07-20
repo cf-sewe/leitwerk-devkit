@@ -374,4 +374,4 @@ replaces the hard external gate. Because plugins cannot package workflows,
 orchestration ships via the review/build skills invoking the `Workflow` tool plus
 a saved `.claude/workflows/leitwerk-review.mjs`. Open-code tools lack an
 equivalent engine and fall back to sequential roles + the CI gate. See
-`leitwerk/specs/workflow-orchestration.md`.
+`leitwerk/specs/archive/workflow-orchestration.md`.

@@ -1,6 +1,6 @@
 # Spec — reimplement the core CLI as a compiled Go binary
 
-Status: active (2026-07-19) <!-- built and reviewed; mark landed when merged -->
+Status: landed (2026-07-19) <!-- durable content: constitution decision of record (Go reimplementation) -->
 
 ## Problem
 `core/bin/leitwerk` is a ~170-line Bash script. It is the one deterministic

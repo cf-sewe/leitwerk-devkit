@@ -20,6 +20,16 @@ argue with a red result — fix the cause.
 
 A `PreToolUse` hook blocks edits to these; `leitwerk guard <path>` is the check.
 
+## When to ask the human
+Escalate a decision only if it (1) sets or changes intent — scope, priorities,
+spec approval; (2) weakens or waives a guarantee — thresholds, checks, tiers;
+or (3) accepts irreversible or residual risk — T2 sign-off, shipping with an
+open finding. Everything else: decide, record it in the spec's Design
+decisions, keep it reversible. Never ask what the repo can answer; wake a
+specialist role for domain judgment. Escalations are decision-ready — options,
+evidence, recommendation — as `leitwerk/proposals/` files when they must
+outlive the session.
+
 ## Procedures (loaded on demand — do not inline them here)
 Use the skills: `leitwerk-onboard`, `leitwerk-spec`, `leitwerk-plan`,
 `leitwerk-build`, `leitwerk-review`. Specialist roles live in

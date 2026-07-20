@@ -13,6 +13,18 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ls \"$CLAUDE_PROJECT_DIR/leitwerk/proposals\" 2>/dev/null | grep -v '^README' | sed 's/^/leitwerk: open proposal awaiting the human (present as multiple-choice, see leitwerk-review): leitwerk\\/proposals\\//'; exit 0",
+            "statusMessage": "Checking for proposals awaiting the human...",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

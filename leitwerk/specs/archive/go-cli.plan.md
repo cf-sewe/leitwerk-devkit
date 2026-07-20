@@ -1,8 +1,8 @@
 # Plan — reimplement the core CLI as a compiled Go binary
 
-Status: active (2026-07-19) <!-- all steps built; archive when the change lands -->
+Status: landed (2026-07-19) <!-- all steps landed with the Go cutover -->
 
-Spec: `leitwerk/specs/go-cli.md`. The replacement is a strangler-fig: the Bash CLI
+Spec: `leitwerk/specs/archive/go-cli.md`. The replacement is a strangler-fig: the Bash CLI
 stays at `core/bin/leitwerk` and keeps the gate (and the PreToolUse guard hook)
 working until the Go binary is built and proven, then the binary overwrites it.
 

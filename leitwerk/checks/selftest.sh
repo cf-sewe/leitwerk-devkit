@@ -77,5 +77,47 @@ if ! scen_out="$(examples/scenarios/run-all.sh "$CLI" 2>&1)"; then
   echo "FAIL: a documented scenario regressed (examples/scenarios/)" >&2; fail=1
 fi
 
-[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios)"
+# 6. The repo-local lifecycle check enforces terminal spec/plan states
+#    mechanically (see leitwerk/specs/archive/lifecycle-check.md). Fixture assertions:
+#    consistent tree passes, misplaced/invalid states fail, no specs dir skips.
+LC="$PWD/leitwerk/checks/lifecycle.sh"
+if [ -x "$LC" ]; then
+  lc_tmp="$(mktemp -d)"
+  mkdir -p "$lc_tmp/specs/archive"
+  printf 'Status: active (2026-07-19)\n' > "$lc_tmp/specs/ok.md"
+  printf 'Status: landed (2026-07-19)\n' > "$lc_tmp/specs/archive/done.md"
+  if ! LEITWERK_SPECS="$lc_tmp/specs" "$LC" >/dev/null 2>&1; then
+    echo "FAIL: lifecycle check red on a consistent fixture" >&2; fail=1
+  fi
+  mkdir -p "$lc_tmp/props"
+  printf '# p\n' > "$lc_tmp/props/20200101_000000-old-proposal.md"
+  lc_out="$(LEITWERK_SPECS="$lc_tmp/specs" LEITWERK_PROPOSALS="$lc_tmp/props" "$LC" 2>&1 || true)"
+  case "$lc_out" in
+    *"proposal(s) open"*) : ;;
+    *) echo "FAIL: lifecycle did not report open proposals" >&2; fail=1 ;;
+  esac
+  case "$lc_out" in
+    *"open since 2020-01-01"*) : ;;
+    *) echo "FAIL: lifecycle did not flag an overdue proposal" >&2; fail=1 ;;
+  esac
+  printf 'Status: landed (2026-07-19)\n' > "$lc_tmp/specs/stale.md"
+  if LEITWERK_SPECS="$lc_tmp/specs" "$LC" >/dev/null 2>&1; then
+    echo "FAIL: lifecycle check green on a landed record outside archive/" >&2; fail=1
+  fi
+  rm -f "$lc_tmp/specs/stale.md"
+  printf 'no status line here\n' > "$lc_tmp/specs/broken.md"
+  if LEITWERK_SPECS="$lc_tmp/specs" "$LC" >/dev/null 2>&1; then
+    echo "FAIL: lifecycle check green on a spec without a Status line" >&2; fail=1
+  fi
+  rc=0
+  LEITWERK_SPECS="$lc_tmp/nowhere" "$LC" >/dev/null 2>&1 || rc=$?
+  if [ "$rc" -ne 2 ]; then
+    echo "FAIL: lifecycle with no specs dir = exit $rc, want 2 (skip)" >&2; fail=1
+  fi
+  rm -rf "$lc_tmp"
+else
+  echo "FAIL: leitwerk/checks/lifecycle.sh missing or not executable" >&2; fail=1
+fi
+
+[ "$fail" -eq 0 ] && echo "CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle)"
 exit "$fail"

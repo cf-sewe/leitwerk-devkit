@@ -15,7 +15,10 @@ allowed-tools: "Read Grep Glob Bash Write Edit"
    its own. Prefer a sequence that keeps the system shippable throughout
    (strangler-fig for replacements).
 3. For each step record: files touched, tier (`leitwerk tier <path>`), and the
-   checks that prove it.
+   checks that prove it. Give each step a status box (`[ ]`) — `leitwerk-build`
+   keeps it current. No file or symbol reference enters the plan unverified:
+   read the code it points at first. For T2 steps also record the manual
+   checks a human must eyeball.
 4. **Verification strategy** — which oracles are added/extended and at which
    tier. New behaviour needs a new test before it is built.
 5. **Risks & rollback** — per step; for T2 steps write the explicit rollback.

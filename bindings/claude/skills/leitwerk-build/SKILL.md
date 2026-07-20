@@ -4,7 +4,7 @@ description: >
   Implement one planned step and gate it. Use to execute a step from a
   leitwerk-plan. Runs the tier-selected checks and wakes the review roles the
   step's blast radius requires.
-allowed-tools: "Read Grep Glob Bash Write Edit"
+allowed-tools: "Read Grep Glob Bash Write Edit Task"
 ---
 
 # Build one gated step
@@ -18,7 +18,10 @@ allowed-tools: "Read Grep Glob Bash Write Edit"
 4. Run the gate at the step's tier: `leitwerk verify --tier <T0|T1|T2>`.
    Iterate until green. The gate is deterministic — do not argue with a red
    result, fix the cause.
-5. **Review at the tier's weight:**
+5. **Record progress** — update the step's status line in the plan: `[x]` done,
+   or `[~]` plus one line on how you deviated. A cold session must be able to
+   resume from the plan file alone.
+6. **Review at the tier's weight:**
    - T1+: spawn the `test-engineer` if the golden suite changed.
    - T2 (or several roles apply): run the review panel — prefer the saved
      `/leitwerk-review` workflow (`leitwerk init` scaffolds it into
@@ -27,7 +30,7 @@ allowed-tools: "Read Grep Glob Bash Write Edit"
      spawn the roles directly instead. The workflow script is the orchestrator,
      so there is no orchestrator role; the panel is advisory and the gate in
      step 4 is what blocks.
-6. If implementing revealed the spec was wrong or incomplete, update the spec
+7. If implementing revealed the spec was wrong or incomplete, update the spec
    now (bidirectional refinement). If code and spec conflict irreconcilably,
    stop and surface the drift to a human — do not pick a winner silently.
 

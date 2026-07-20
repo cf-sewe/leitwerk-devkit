@@ -12,7 +12,9 @@ allowed-tools: "Read Grep Glob Bash Write Edit"
 Goal: leave the repo with a working `leitwerk verify`, a human-owned
 constitution, and a tier map that reflects real blast radius. Do not invent
 facts — read the code and ask the human only where intent is genuinely unknowable
-from the repository.
+from the repository. Label every fact derived from the code CONFIRMED (verified
+by reading/running) / INFERRED (reasoned) / GAP (unknown); INFERRED and GAP
+need human validation before they gain authority.
 
 ## Steps
 1. **Scaffold** if absent: run `leitwerk init` to create `leitwerk/constitution.md`

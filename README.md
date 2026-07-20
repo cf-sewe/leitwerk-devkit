@@ -27,7 +27,9 @@ work, and by CI before merge). The agent cannot edit the gate to pass itself.
 
 - **You own intent and judgment** — the requirements, the spec, and the review
   of what a human must eyeball. These are human-owned; the agent proposes changes
-  to them, it does not make them.
+  to them, it does not make them. Only three kinds of decisions are escalated
+  to you: intent and priorities, anything that would weaken a guarantee, and
+  accepting irreversible risk — everything else the agent decides and records.
 - **The agent owns generation** — most of the code, guided by the spec.
 - **Spec and code co-evolve, bound together** — a change that makes them disagree
   is surfaced as drift, not silently resolved.
@@ -94,7 +96,7 @@ leitwerk-devkit/
 │
 │  # ── the devkit governing itself (dogfooding) — not shipped to adopters ──
 ├── leitwerk/                # THIS repo's own governance: constitution, tiers, specs, roadmap,
-│                            #   and repo-local checks (json, shell, selftest, parity, context)
+│                            #   and repo-local checks (json, shell, selftest, parity, context, lifecycle)
 ├── .claude/                 # THIS repo's Claude config: settings (hooks), rules, review workflow
 ├── .github/workflows/       # THIS repo's CI — the gate gating its own development
 └── .claude-plugin/          # marketplace.json — this repo is also a Claude Code marketplace
@@ -108,6 +110,32 @@ The bottom group is the repo applying Leitwerk to **itself**: `leitwerk/`,
 `.claude/`, and `.github/` govern this repo's own development. They are the
 reference for what an adopter's repo ends up looking like — not part of what gets
 installed.
+
+## How specs age
+
+A spec's filename is its topic — `leitwerk/specs/<slug>.md`, with an optional
+`<slug>.plan.md` alongside. Its age lives in the `Status:` line inside the file
+(`draft → active → landed → superseded`), never in the filename; dated filenames
+are reserved for frozen snapshots such as review reports. Change records are
+perishable: when a change lands, the durable part merges into the area's living
+spec or the constitution's decisions of record, and the file moves to
+`leitwerk/specs/archive/` — the consolidation pass nicknamed "dreaming". Only
+`active` specs are current contract, which keeps what an agent loads small and
+relevant as a repository ages. The states are enforced, not just convention: a
+`lifecycle` check turns the gate red when a `landed` record sits outside
+`archive/`, a `Status:` line is missing, or a spec and its plan disagree — and
+it flags plans that are ready to land and records overdue for the dreaming pass.
+
+```
+roadmap.md          leitwerk/specs/<slug>.md (+ <slug>.plan.md)      specs/archive/
+(human-owned)
+
+proposed --promote--> draft --build--> active --land--> landed --move--> archived
+                                         |                |
+                     the only state that is               | durable core merges into
+                     current contract for agents          v the living spec / decisions
+                                                            of record ("dreaming")
+```
 
 ## Why a CLI? (and how it fits each tool)
 

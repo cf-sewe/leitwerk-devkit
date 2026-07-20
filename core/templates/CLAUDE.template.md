@@ -20,6 +20,16 @@ The `Stop` hook runs this and blocks turn-end on a red gate.
 A `PreToolUse` hook blocks edits to human-owned files; `leitwerk guard <path>`
 is the check.
 
+## When to ask the human
+Escalate a decision only if it (1) sets or changes intent — scope, priorities,
+spec approval; (2) weakens or waives a guarantee — thresholds, checks, tiers;
+or (3) accepts irreversible or residual risk — T2 sign-off, shipping with an
+open finding. Everything else: decide, record it in the spec's Design
+decisions, keep it reversible. Never ask what the repo can answer; wake a
+specialist role for domain judgment. Escalations are decision-ready — options,
+evidence, recommendation — as `leitwerk/proposals/` files when they must
+outlive the session.
+
 ## Procedures (loaded on demand)
 Use the Leitwerk skills (`leitwerk-onboard/spec/plan/build/review`). Do not
 inline multi-step procedures into this file.

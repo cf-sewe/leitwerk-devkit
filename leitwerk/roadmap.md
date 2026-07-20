@@ -82,6 +82,19 @@ before making it broadly adoptable.
 - *Roles/skills:* `leitwerk-review` (landing step), `architect` (what counts as
   durable content).
 
+**M1.5 · bugfix-workflow** · tier **T1** (`bindings/*/skills`, templates)
+- *Problem:* whitepaper §8.3 defines workflow C (reproduce → localize → pin with
+  a failing test → fix at the diff's tier), but no skill implements it; bugfixes
+  run through `leitwerk-build` without the reproduce/pin prefix.
+- *Behaviour:* a bugfix entry path (own skill or a `leitwerk-build` variant):
+  reproduce the defect first, write the failing regression test plus
+  characterization tests around the touched code, then fix at the change's
+  tier. `bindings/open/AGENTS.md` mirrors the working method.
+- *Acceptance:* a documented run on `examples/reference-app` where a seeded bug
+  is reproduced, pinned by a failing test, fixed, and the gate goes green.
+  Depends on M1.2 (reference-app-real) for the substrate.
+- *Roles/skills:* `test-engineer` (the pin), `architect` (skill shape).
+
 ### Milestone 2 — make it adoptable
 
 **M2.1 · cli-publish** · tier **T1**
@@ -184,6 +197,18 @@ constraint.
 - *Acceptance:* scenario/`selftest` case: empty toolchain at T2 with `sast`
   required → exit 1; with the tool installed → normal pass/fail.
 
+**M3.7 · repo-map** · tier **T2** (core) — design-proposal open decision O2
+- *Problem:* the research step retrieves via scouts running grep/glob; P4
+  (retrieve-don't-preload) calls for a structural symbol map, and context-rot
+  evidence says preloading does not scale with repo size.
+- *Behaviour:* the CLI builds/refreshes a tree-sitter symbol map (Aider-style
+  ranking) that scouts query for "where is X / who calls X"; a typed code
+  graph stays deferred until a repo exceeds ~1k files (per O2).
+- *Acceptance:* on a fixture repo, a scout answers a where-is/who-calls
+  question from the map without full-text search; the map refreshes
+  incrementally and stale entries are detectable.
+- *Roles/skills:* `architect` (map format/CLI surface), `test-engineer`.
+
 ### Milestone 4 — measure the framework itself
 
 **M4.1 · efficiency-evaluation** · process (periodic, not per-change)
@@ -207,18 +232,18 @@ constraint.
   skills. Rules/CLAUDE.md are repo-level (not plugin-packageable) → `leitwerk
   init` scaffolds them, templates in `core/templates/`. Guard is a guardrail; the
   gate stays the hard guarantee (parity intact). Tested (guard + hook + selftest).
-  See `leitwerk/specs/steering-alignment.md`.
+  See `leitwerk/specs/archive/steering-alignment.md`.
 - **Open-code guarantee-parity guarded by construction.** Split compatibility
   into guarantee-parity (must hold) vs ergonomics-parity (don't chase). Added the
   `parity` structural check (fails if gate logic leaks into a binding), a
   constitution invariant, and a CI job that runs the core gate with no agent
   runtime. Negative-tested. Live open-code validation stays deferred to **M3.4**
-  (do when stable). See `leitwerk/specs/open-code-parity.md`.
+  (do when stable). See `leitwerk/specs/archive/open-code-parity.md`.
 - **Layer-2 orchestration → native dynamic workflows.** Retired the hand-rolled
   orchestrator role; roles reused as workflow `agentType`s; added
   `.claude/workflows/leitwerk-review.mjs`; review scales by tier; workflow
   verification is soft, the external gate stays authoritative. See
-  `leitwerk/specs/workflow-orchestration.md` and the constitution's decisions.
+  `leitwerk/specs/archive/workflow-orchestration.md` and the constitution's decisions.
   A JS syntax check for workflow scripts in the gate is a small open follow-up.
 
 ## Not planned (explicit non-goals for now)

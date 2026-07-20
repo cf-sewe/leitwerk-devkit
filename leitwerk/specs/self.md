@@ -18,7 +18,9 @@ generic. This spec anchors the repository to its own gate.
   unit + integration tests, re-asserts the external contract, and executes the
   documented scenarios in `examples/scenarios/`), `parity` (the guarantee stays
   in `core/`, stdlib-only; bindings delegate), `context` (always-on steering
-  files stay within the constitution's context budgets).
+  files stay within the constitution's context budgets), `lifecycle` (spec/plan
+  lifecycle states are consistent: valid `Status:` lines, terminal states only
+  in `leitwerk/specs/archive/`, spec and plan agree).
 - The gate is green on a clean tree; a real defect (invalid JSON, shell syntax
   error, or a broken tier boundary) turns it red.
 
@@ -32,8 +34,9 @@ framework ship an untested gate.
 
 ## Acceptance checks
 `leitwerk verify --tier T2` exits 0 on the clean repo, and exits non-zero if any
-of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
-`selftest.sh` regresses. Enforced locally by the Stop hook in `.claude/settings.json`
+of: a manifest is corrupted, a script has a syntax error, a tier boundary in
+`selftest.sh` regresses, or a landed spec record sits outside
+`leitwerk/specs/archive/`. Enforced locally by the Stop hook in `.claude/settings.json`
 and authoritatively by `.github/workflows/leitwerk.yml`.
 
 ## Out of scope

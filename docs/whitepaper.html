@@ -397,8 +397,86 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
 <figcaption>Figure 2. The core loop. The gate is a hard stop; refinement is bidirectional — results feed back into the specification.</figcaption>
 </figure>
 
+<p>The loop's paper trail ages by design. A change-spec and its plan are <em>perishable</em>: they carry authority only while the change is in flight (Figure 3). The <code>Status:</code> line inside the file — never a date in the filename — tracks where it stands (<code>draft → active → landed → superseded</code>); dated filenames are reserved for frozen snapshots such as review reports. When a change lands, its durable core is merged into the area's living spec or the constitution's decisions of record, and the change record moves to <code>leitwerk/specs/archive/</code>. Only <code>active</code> specs are current contract, which keeps what an agent loads small and relevant as a repository ages. The consolidation pass is nicknamed <em>dreaming</em>.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 760 300" role="img" aria-label="State diagram of a spec's life: proposed in the roadmap, then draft, active, landed, archived; landing merges durable content into living documents.">
+  <defs>
+    <marker id="ah-lc" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahf"/></marker>
+    <marker id="aha-lc" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="aha"/></marker>
+  </defs>
+  <!-- zone labels -->
+  <text class="grp" x="90" y="30" text-anchor="middle">roadmap.md · human-owned</text>
+  <text class="grp" x="407" y="30" text-anchor="middle">leitwerk/specs/&lt;slug&gt;.md · + &lt;slug&gt;.plan.md</text>
+  <text class="grp" x="703" y="30" text-anchor="middle">specs/archive/</text>
+  <!-- states -->
+  <g>
+    <rect class="node" x="28" y="48" width="124" height="56" rx="9"/>
+    <text class="lbl-c" x="90" y="72" font-weight="700">proposed</text>
+    <text class="sub-c" x="90" y="90">backlog proto-spec</text>
+  </g>
+  <path class="arw" d="M152,76 L200,76" marker-end="url(#ah-lc)"/>
+  <g>
+    <rect class="node" x="200" y="48" width="110" height="56" rx="9"/>
+    <text class="lbl-c" x="255" y="72" font-weight="700">draft</text>
+    <text class="sub-c" x="255" y="90">being written</text>
+  </g>
+  <path class="arw" d="M310,76 L352,76" marker-end="url(#ah-lc)"/>
+  <g>
+    <rect class="node" x="352" y="48" width="110" height="56" rx="9" style="stroke: var(--accent); stroke-width: 2"/>
+    <text class="lbl-c" x="407" y="72" font-weight="700">active</text>
+    <text class="sub-c" x="407" y="90">current contract</text>
+  </g>
+  <path class="arw" d="M462,76 L504,76" marker-end="url(#ah-lc)"/>
+  <g>
+    <rect class="node" x="504" y="48" width="110" height="56" rx="9"/>
+    <text class="lbl-c" x="559" y="72" font-weight="700">landed</text>
+    <text class="sub-c" x="559" y="90">history, not contract</text>
+  </g>
+  <path class="arw" d="M614,76 L656,76" marker-end="url(#ah-lc)"/>
+  <g>
+    <rect class="node" x="656" y="48" width="94" height="56" rx="9"/>
+    <text class="lbl-c" x="703" y="72" font-weight="700">archived</text>
+    <text class="sub-c" x="703" y="90">no longer loaded</text>
+  </g>
+  <!-- transition labels -->
+  <text class="sub-c" x="176" y="124">promoted</text>
+  <text class="sub-c" x="331" y="124">work starts</text>
+  <text class="sub-c" x="483" y="124">lands, gate green</text>
+  <text class="sub-c" x="635" y="124">file moves</text>
+  <!-- consolidation ("dreaming") -->
+  <path class="arw-a" d="M559,104 C559,158 512,182 454,198" marker-end="url(#aha-lc)"/>
+  <text class="sub-c" x="600" y="160">durable core merged out</text>
+  <text class="sub-c" x="600" y="176">— the “dreaming” pass</text>
+  <g>
+    <rect class="node" x="200" y="176" width="250" height="56" rx="9"/>
+    <text class="lbl-c" x="325" y="200" font-weight="700">living spec · decisions of record</text>
+    <text class="sub-c" x="325" y="218">what stays true — kept small</text>
+  </g>
+  <text class="sub-c" x="380" y="272">Only active specs are loaded as current contract; “superseded by &lt;slug&gt;” points from the archive to the successor.</text>
+</svg>
+<figcaption>Figure 3. The life of a spec. The <code>Status:</code> line — not the filename — carries age; landing merges the durable core into living documents (the “dreaming” consolidation) and moves the change record to the archive.</figcaption>
+</figure>
+
+<p><strong>Keeping artifacts — and the code they describe — current.</strong> The natural question for any documentation-bearing process is what stops the paper from rotting. Leitwerk's answer is the same as for code: prose states each rule, the gate enforces its mechanically checkable part, and every rule names its guard. Stale lifecycle states are not merely discouraged — they fail <code>leitwerk verify</code>, which runs on every change (Stop hook) and every merge (CI):</p>
+
+<table>
+  <thead><tr><th>Rule</th><th>Guard</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Every spec/plan carries a valid <code>Status:</code> line; <code>landed</code>/<code>superseded</code> records live only in <code>archive/</code>; a spec and its plan never disagree on terminal state</td><td><code>lifecycle</code> check — red gate</td><td>shipped (repo-local)</td></tr>
+    <tr><td>A finished plan that has not landed, and a change record aging in the active set, are flagged for the dreaming pass</td><td><code>lifecycle</code> check — advisory warning</td><td>shipped (repo-local)</td></tr>
+    <tr><td>Always-on steering files stay within context budgets</td><td><code>context</code> check — red gate</td><td>shipped</td></tr>
+    <tr><td>A scaffolded artifact and its template never diverge silently (e.g. the review workflow)</td><td><code>selftest</code> diff assertion — red gate</td><td>shipped</td></tr>
+    <tr><td>Code changed but the spec anchored to it did not, or vice versa — the rule that also covers <em>dependent source code</em></td><td>drift sensor with spec↔code anchors — red gate, a human reconciles</td><td>design target (M1.1)</td></tr>
+    <tr><td>Archived records count nowhere as active; drift ignores them</td><td>archive-aware tooling</td><td>design target (M1.4)</td></tr>
+    <tr><td><code>draft → active</code> only through human approval; the durable core of a landing change is merged <em>correctly</em></td><td>human judgment at review — not mechanizable</td><td>by design</td></tr>
+  </tbody>
+</table>
+
+<p>What this deliberately does not claim: no check can prove free prose (this paper, a README) truthful. Prose is reviewed at its tier's weight like any other change — the gate's role is to make the <em>structural</em> symptoms of rot (misplaced states, missing statuses, stale anchors, budget creep) fail loudly instead of accumulating silently.</p>
+
 <h2 id="roles"><span class="num">5</span>Roles &amp; the agent ensemble</h2>
-<p>Monolithic autonomy is both costlier and less reliable than a decomposed ensemble with scoped context<sup class="cite"><a href="#r-masai">5</a></sup><sup class="cite"><a href="#r-agentless">6</a></sup>. Leitwerk defines eleven roles across five bands (Figure 3). Verification roles are deliberately <em>independent</em> of the roles that produced the work — same-model reviewers share blind spots, so review adds value only when it is adversarial and separately prompted<sup class="cite"><a href="#r-cloudflare">4</a></sup>.</p>
+<p>Monolithic autonomy is both costlier and less reliable than a decomposed ensemble with scoped context<sup class="cite"><a href="#r-masai">5</a></sup><sup class="cite"><a href="#r-agentless">6</a></sup>. Leitwerk defines eleven roles across five bands (Figure 4). Verification roles are deliberately <em>independent</em> of the roles that produced the work — same-model reviewers share blind spots, so review adds value only when it is adversarial and separately prompted<sup class="cite"><a href="#r-cloudflare">4</a></sup>.</p>
 
 <figure class="fig">
 <svg viewBox="0 0 760 436" role="img" aria-label="Role ensemble: an orchestrator over four bands of roles, colored by model tier.">
@@ -442,7 +520,7 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
   <rect class="small" x="300" y="392" width="26" height="16" rx="4"/>
   <text class="lbl" x="334" y="405">small / fast — routine work</text>
 </svg>
-<figcaption>Figure 3. The role ensemble. The Orchestrator delegates to four bands; fill colour marks the default model tier. The verification panel is independent of the roles that produced the work. On Claude Code the ensemble is realized by a dynamic workflow (Section 7) rather than a bespoke orchestrator role.</figcaption>
+<figcaption>Figure 4. The role ensemble. The Orchestrator delegates to four bands; fill colour marks the default model tier. The verification panel is independent of the roles that produced the work. On Claude Code the ensemble is realized by a dynamic workflow (Section 7) rather than a bespoke orchestrator role.</figcaption>
 </figure>
 
 <div class="scroll">
@@ -468,7 +546,7 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
 <p>The table above is the tool-agnostic <em>design</em>. The Claude Code binding realizes it with a deliberately small set of subagents plus a workflow, not eleven bespoke roles — the reference implementation ships <strong>four</strong> role subagents in <a href="../bindings/claude/agents/"><code>bindings/claude/agents/</code></a>, reused unchanged as the review workflow's <code>agentType</code>s (Section 7):</p>
 <div class="scroll">
 <table>
-  <thead><tr><th>Design role (Fig. 3)</th><th>As implemented in this repo</th><th>Model</th></tr></thead>
+  <thead><tr><th>Design role (Fig. 4)</th><th>As implemented in this repo</th><th>Model</th></tr></thead>
   <tbody>
     <tr><td>Architect</td><td><code>architect</code> subagent — design, seams, structural fitness checks</td><td><span class="pill m-big">Opus</span></td></tr>
     <tr><td>Test Engineer + Correctness Reviewer</td><td><code>test-engineer</code> subagent — owns the executable oracle; extends the golden suite</td><td><span class="pill m-small">Sonnet</span></td></tr>
@@ -524,7 +602,7 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
 <p>Concretely, the workflow is <a href="../core/templates/workflows/leitwerk-review.mjs"><code>.claude/workflows/leitwerk-review.mjs</code></a>. It runs three phases — <strong>Review</strong> (one role subagent per dimension, scaled by tier: correctness at T0, +spec-fidelity at T1, +security at T2), <strong>Verify</strong> (independent agents try to <em>refute</em> each finding; unrefuted findings survive), and <strong>Gate</strong> (it runs <code>leitwerk verify</code> and only reports the result). Its return value marks a change landable only when the gate is green <em>and</em> no finding survived — but the gate, enforced at turn end, is what actually blocks. A Claude Code plugin cannot package a workflow, so it ships as a <code>core/templates/</code> scaffold that <code>leitwerk init</code> writes into the repo; the phase skills prefer it and fall back to spawning the roles directly, so review never depends on it being present.</p>
 
 <h2 id="workflows"><span class="num">8</span>Workflows: greenfield, feature, bugfix</h2>
-<p>The three use cases share the core loop — <em>spec → plan → build → verify → review</em> — but enter it differently and weight the bands differently (Figure 4). Greenfield leads with architecture; a feature on existing code must first <em>onboard</em> and pin behavior; a bugfix optimizes for the lightest safe path.</p>
+<p>The three use cases share the core loop — <em>spec → plan → build → verify → review</em> — but enter it differently and weight the bands differently (Figure 5). Greenfield leads with architecture; a feature on existing code must first <em>onboard</em> and pin behavior; a bugfix optimizes for the lightest safe path.</p>
 
 <figure class="fig">
 <svg viewBox="0 0 760 330" role="img" aria-label="The three use cases converging into one shared core loop, gate, and review.">
@@ -568,7 +646,7 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
   <path class="arw" d="M627,232 L627,252" marker-end="url(#ah4)"/>
   <rect class="node" x="510" y="254" width="234" height="40" rx="8"/><text class="lbl-c" x="627" y="274">Human review</text><text class="sub-c" x="627" y="288">behavior / visual</text>
 </svg>
-<figcaption>Figure 4. All three use cases converge on one shared core loop, gate, and review. The difference is the prefix: architecture (A), onboarding + behavior-pinning (B), or reproduce + pin (C).</figcaption>
+<figcaption>Figure 5. All three use cases converge on one shared core loop, gate, and review. The difference is the prefix: architecture (A), onboarding + behavior-pinning (B), or reproduce + pin (C).</figcaption>
 </figure>
 
 <h3>8.1 Workflow A — Greenfield complex application</h3>
@@ -603,7 +681,7 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
 </ol>
 
 <h2 id="gate"><span class="num">9</span>Verification &amp; the gate</h2>
-<p><code>leitwerk verify</code> is one deterministic command, composed of tier-selected checks (Figure 5). The agent runs it locally; CI runs it authoritatively; on Claude Code it is also wired as a <code>Stop</code> hook, so a turn cannot end on a red gate at the hook's configured tier (the hook reads <code>$LEITWERK_TIER</code>, defaulting to T1 — per-change tier selection from the diff happens in CI, not in the hook). Gate <em>definitions</em> are human-owned — the tier→check policy lives in the tiers file, governed by the constitution: an agent may propose a new check but cannot lower a threshold, remove a check, or downgrade a path's tier without a human-approved change to those files.</p>
+<p><code>leitwerk verify</code> is one deterministic command, composed of tier-selected checks (Figure 6). The agent runs it locally; CI runs it authoritatively; on Claude Code it is also wired as a <code>Stop</code> hook, so a turn cannot end on a red gate at the hook's configured tier (the hook reads <code>$LEITWERK_TIER</code>, defaulting to T1 — per-change tier selection from the diff happens in CI, not in the hook). Gate <em>definitions</em> are human-owned — the tier→check policy lives in the tiers file, governed by the constitution: an agent may propose a new check but cannot lower a threshold, remove a check, or downgrade a path's tier without a human-approved change to those files.</p>
 
 <figure class="fig">
 <svg viewBox="0 0 760 300" role="img" aria-label="Blast-radius tiers: each tier adds cumulative checks and a stricter human checkpoint.">
@@ -640,7 +718,7 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
   <!-- cross-cutting -->
   <text class="sub-t" x="44" y="284">Design target: drift sensor at every tier + an advisory review panel (never the sole gate). Shipped: drift from T1, panel at T2 (§9.2).</text>
 </svg>
-<figcaption>Figure 5. Blast-radius tiers. Checks and human scrutiny accumulate with the potential damage of a change.</figcaption>
+<figcaption>Figure 6. Blast-radius tiers. Checks and human scrutiny accumulate with the potential damage of a change.</figcaption>
 </figure>
 
 <div class="scroll">
@@ -674,7 +752,7 @@ of: a manifest is corrupted, a script has a syntax error, or a tier boundary in
 <p><strong>Exit codes</strong> are the contract every surface keys off: <code>0</code> gate green / path editable · <code>1</code> a check failed (gate red) · <code>2</code> usage error · <code>3</code> path is human-owned. A single check's own <code>exit 2</code> means <em>skip</em> (nothing to run) and never fails the gate — a green gate means checks ran or abstained visibly. For the shipped checks that property holds by construction; for repo-local overrides it is a constitutional convention review must uphold — the gate cannot verify a check's own honesty.</p>
 
 <h3 id="tiersfile">9.2 The policy file, and the shipped defaults</h3>
-<p>The tier table above (Fig. 5) is the design target a mature repository grows into; the <em>shipped</em> defaults are leaner and auto-detect a toolchain, skipping cleanly until wired to a project's real build/test/SAST. Policy is one human-owned file, <a href="../core/leitwerk.tiers"><code>leitwerk.tiers</code></a> (an adopter's copy is <code>leitwerk/tiers.conf</code>), with three tables: <code>[tiers]</code> maps a tier to its cumulative check list, <code>[paths]</code> maps a path glob to a tier (first match wins), and <code>[human-owned]</code> lists the files an agent may propose but not edit.</p>
+<p>The tier table above (Fig. 6) is the design target a mature repository grows into; the <em>shipped</em> defaults are leaner and auto-detect a toolchain, skipping cleanly until wired to a project's real build/test/SAST. Policy is one human-owned file, <a href="../core/leitwerk.tiers"><code>leitwerk.tiers</code></a> (an adopter's copy is <code>leitwerk/tiers.conf</code>), with three tables: <code>[tiers]</code> maps a tier to its cumulative check list, <code>[paths]</code> maps a path glob to a tier (first match wins), and <code>[human-owned]</code> lists the files an agent may propose but not edit.</p>
 <pre><code>[tiers]
 T0 = lint
 T1 = lint types tests drift
@@ -694,16 +772,17 @@ infra/**            = T2
 **/*.tf             = T2
 **/*.yaml           = T2
 *                   = T1</code></pre>
-<p>Each check is one script that exits 0 (pass), 1 (fail), or 2 (skip). The built-in checks in <a href="../core/checks/"><code>core/checks/</code></a> auto-detect a toolchain: <code>lint</code>, <code>types</code>, <code>tests</code>, <code>sast</code> (semgrep when installed; a dependency-policy check is a design target, not yet shipped), <code>drift</code> (placeholder, see above), and <code>erosion</code> (duplication budget when an analyzer is installed). A consuming repo overrides any check by dropping its own <code>&lt;name&gt;.sh</code> into <code>leitwerk/checks/</code> — it never edits the installed core. This repository does exactly that: being a polyglot tool rather than an app, its own T2 gate is <code>json shell drift selftest parity</code>, with repo-local checks in <a href="../leitwerk/checks/"><code>leitwerk/checks/</code></a> — <code>json</code> (manifests parse), <code>shell</code> (<code>bash -n</code> + shellcheck), <code>selftest</code> (the CLI's golden suite: it builds the Go binary, runs its unit + integration tests, re-asserts the external contract, and executes the runnable scenarios in <a href="../examples/scenarios/"><code>examples/scenarios/</code></a> — each an executable statement of one framework guarantee), and <code>parity</code> (the boundary fitness function of §11), plus <code>context</code> (§9.4 — budgets the always-on context surface; runs at every tier). Running the gate on this repository (2026-07-19):</p>
+<p>Each check is one script that exits 0 (pass), 1 (fail), or 2 (skip). The built-in checks in <a href="../core/checks/"><code>core/checks/</code></a> auto-detect a toolchain: <code>lint</code>, <code>types</code>, <code>tests</code>, <code>sast</code> (semgrep when installed; a dependency-policy check is a design target, not yet shipped), <code>drift</code> (placeholder, see above), and <code>erosion</code> (duplication budget when an analyzer is installed). A consuming repo overrides any check by dropping its own <code>&lt;name&gt;.sh</code> into <code>leitwerk/checks/</code> — it never edits the installed core. This repository does exactly that: being a polyglot tool rather than an app, its own T2 gate is <code>json shell drift selftest parity context lifecycle</code>, with repo-local checks in <a href="../leitwerk/checks/"><code>leitwerk/checks/</code></a> — <code>json</code> (manifests parse), <code>shell</code> (<code>bash -n</code> + shellcheck), <code>selftest</code> (the CLI's golden suite: it builds the Go binary, runs its unit + integration tests, re-asserts the external contract, and executes the runnable scenarios in <a href="../examples/scenarios/"><code>examples/scenarios/</code></a> — each an executable statement of one framework guarantee), and <code>parity</code> (the boundary fitness function of §11), plus two checks that run at every tier: <code>context</code> (§9.4 — budgets the always-on context surface) and <code>lifecycle</code> (§4 — terminal spec states live in the archive, every record carries a valid status, spec and plan agree). Running the gate on this repository (2026-07-19):</p>
 <pre><code>leitwerk verify <span class="c-dim">(tier T2)</span>
-<span class="c-dim">checks: json shell drift selftest parity context</span>
+<span class="c-dim">checks: json shell drift selftest parity context lifecycle</span>
 
   <span class="c-ok">✓</span>  json       4 JSON manifest(s) parse
-  <span class="c-ok">✓</span>  shell      19 script(s): bash -n + shellcheck clean
-  <span class="c-ok">✓</span>  drift      6 spec(s) tracked; no unreconciled drift flagged
-  <span class="c-ok">✓</span>  selftest   CLI golden behaviour intact (built + tested + tiers + gate + scenarios)
+  <span class="c-ok">✓</span>  shell      20 script(s): bash -n + shellcheck clean
+  <span class="c-ok">✓</span>  drift      12 spec(s) tracked; no unreconciled drift flagged
+  <span class="c-ok">✓</span>  selftest   CLI golden behaviour intact (built + tested + tiers + gate + scenarios + lifecycle)
   <span class="c-ok">✓</span>  parity     parity boundary intact (guarantee in core/, stdlib-only, bindings delegate)
-  <span class="c-ok">✓</span>  context    always-on context ~990 est. tokens (budget 2000), files within budget
+  <span class="c-ok">✓</span>  context    always-on context ~1161 est. tokens (budget 2000), files within budget
+  <span class="c-ok">✓</span>  lifecycle  lifecycle intact: 7 active, 5 archived
 
 <span class="c-ok">gate: PASS</span></code></pre>
 <div class="note"><b>Implementation status (2026-07-19).</b> The CI workflow files exist and are structurally validated but have not yet executed on a remote (no public repository yet — roadmap M2.3), and the plugin/skills/workflow composition has not yet been driven in a live session (M2.2). Claims about CI enforcement and workflow orchestration in this paper therefore describe artifacts as written and locally exercised, not yet remotely operated.</div>
@@ -721,13 +800,16 @@ infra/**            = T2
 <p>The always-on surface is also <em>gated</em>: a repo-local <code>context</code> check budgets <code>CLAUDE.md</code> (200 lines), each path-scoped rule (100 lines), each frontmatter description (80 words), and the always-on total (2 000 estimated tokens), so a change that bloats the per-session tax turns the gate red instead of degrading every future turn silently. Outcome-level efficiency — tokens-to-green-gate, human interventions per landed change — is stochastic and model-bound; it belongs in the periodic evaluation harness of §12, not in a per-change gate.</p>
 
 <h2 id="hitl"><span class="num">10</span>Human-in-the-loop</h2>
-<p>Humans own exactly two things: the <strong>constitution and specs</strong> (intent) and the <strong>behavioral / visual review</strong> (acceptance). Everything between is machine-gated. Three rules keep oversight cheap without losing safety.</p>
+<p>Humans own exactly two things: the <strong>constitution and specs</strong> (intent) and the <strong>behavioral / visual review</strong> (acceptance). Everything between is machine-gated. Five rules keep oversight cheap without losing safety.</p>
 <div class="grid">
   <div class="card"><span class="tag">Review behavior, not diffs</span><p>Reviewers see rendered screenshots and visual diffs (approve / reject / ignore, grouped by cosmetic / functional / critical), acceptance scenarios in business language, and the drift report — the artifacts humans judge well.</p></div>
-  <div class="card"><span class="tag">Risk-tier and prune on data</span><p>Start with checkpoints at every high-risk step; track approval and revert rates; remove checkpoints where humans approve ~99% and never modify. This is the RADAR funnel that auto-lands ~60% of diffs safely.<sup class="cite"><a href="#r-radar">23</a></sup></p></div>
+  <div class="card"><span class="tag">Escalate decisions, not questions</span><p>A question reaches the human only if it <em>sets intent</em> (scope, priorities, spec approval), <em>weakens a guarantee</em> (thresholds, checks, tiers), or <em>accepts irreversible risk</em> (T2 sign-off, shipping with an open finding). Everything else the agent decides, records in the spec's Design decisions, and keeps reversible — domain judgment goes to a specialist role, not the human.</p></div>
+  <div class="card"><span class="tag">Risk-tier and prune on data</span><p>Start with checkpoints at every high-risk step; track approval and revert rates; remove checkpoints where humans approve ~99% and never modify. This is the RADAR funnel that auto-lands ~60% of diffs safely.<sup class="cite"><a href="#r-radar">23</a></sup> The same pruning applies to escalations: a question class whose answer never diverges from the agent's recommendation is retired to agent-decided.</p></div>
   <div class="card"><span class="tag">Design against over-trust</span><p>Self-reported confidence is unreliable<sup class="cite"><a href="#r-metr">21</a></sup>. Drive checkpoint pruning from objective signals — revert rate, incident rate, regression escapes, per-cohort pass rates — not from how fast the work feels.</p></div>
   <div class="card"><span class="tag">Bidirectional refinement</span><p>Feedback after review, or an expert's hand-edit, updates the spec: the Spec Steward proposes a reverse-derived spec change (labeled INFERRED) for human confirmation. The spec stays authoritative; the code is allowed to lead when an expert wants it to.</p></div>
 </div>
+
+<p><strong>Escalations are artifacts, not chat.</strong> A decision that must outlive the session lands as a file in <code>leitwerk/proposals/</code>: the decision needed, the exact change (verbatim text or command), how to accept, what rejection means, and a recommendation. The human applies or rejects and deletes the file — proposals cannot rot invisibly in a conversation log, and the decision material is complete at the moment of deciding. This is the counterpart of the human-owned guard: the guard keeps agents from <em>making</em> the human's decisions; the proposals inbox keeps humans from being <em>asked</em> without the material to decide. Follow-up is mechanical, not hoped-for: the <code>lifecycle</code> check counts open proposals on every gate run and flags overdue ones, and on Claude Code a session-start hook surfaces the inbox so the binding presents each decision as a native multiple-choice prompt — problem, options, recommendation — whose accepted answer authorizes the agent to apply the documented change. The gate never turns red over an open proposal: the waiting party is the human, and a red gate would punish unrelated work.</p>
 
 <h2 id="adoption"><span class="num">11</span>Adoption: Claude Code &amp; open agents</h2>
 <p>Leitwerk's core — the artifacts, the gate, and the tier policy — is tool-agnostic and lives in <a href="../core/"><code>core/</code></a>. Each tool gets a thin binding under <a href="../bindings/"><code>bindings/</code></a> that <em>invokes</em> the core and never reimplements it. The <code>leitwerk verify</code> gate is a plain executable wired into CI, so the strongest guarantee never depends on a particular agent runtime.</p>
@@ -771,7 +853,7 @@ infra/**            = T2
   <li><strong>Drift-anchor mechanism is unsettled</strong> (AST fingerprint vs. spec-id comments vs. test-name convention) and determines drift-sensor precision.</li>
   <li><strong>Agents remain weak at system-wide architecture</strong> — the framework relies on humans for decomposition and seams (P9); it does not remove that dependency, it channels it.</li>
   <li><strong>The threat model is narrower than the guarantee language suggests.</strong> Mechanical protection covers the three policy files; the check <em>scripts</em> are agent-editable (at T2, under review), the Claude Stop hook verifies at a configured tier rather than the diff-derived one, hooks themselves can be disabled by a user, and the soft review panel is same-model judgment that can share the generator's blind spots. The deliberate backstop is diff-tiered CI on a protected branch plus human review of policy and checks — but an adversarial analysis of the whole loop (including prompt injection through specs and reverse-derived INFERRED content) has not been done.</li>
-  <li><strong>Artifact lifecycle over years is unproven.</strong> Specs, plans, and decisions-of-record accumulate monotonically; without curation the "durable artifacts" layer becomes its own context liability. The implementation now distinguishes living contracts from perishable change records (a spec's <code>Status:</code> line; plans archived after landing), but the cadence and mechanics of consolidation — merging landed change-specs into area specs, pruning the active set — are a design sketch, not yet practiced governance.</li>
+  <li><strong>Artifact lifecycle over years is unproven.</strong> Specs, plans, and decisions-of-record accumulate monotonically; without curation the "durable artifacts" layer becomes its own context liability. The implementation now distinguishes living contracts from perishable change records (a spec's <code>Status:</code> line; a first consolidation pass archived five landed records), and a <code>lifecycle</code> check turns misplaced terminal states into a red gate. Still open: the cadence and quality of consolidation (is the durable core merged <em>well</em>?), archive-aware drift (M1.4), and spec↔code anchors (M1.1) — judgment-shaped work the gate can tripwire but not perform.</li>
   <li><strong>Long-lived AI-authored projects are too new for longitudinal evidence</strong>; the maintenance claims rest on 2025–2026 practice and preprints, not multi-year studies.</li>
   <li><strong>Part of the evidence base is perishable by design.</strong> The model-capability snapshots in §2 (security-failure rates, the context-rot threshold, iteration-degradation, the productivity delta) were measured on GPT-4-class or early-2025 models; they are dated in §14 and meant to be re-checked. As long-context reliability and secure-by-default behaviour improve, the <em>necessity</em> of P4 (retrieve, don't preload) and the <em>intensity</em> of the security gate should be re-tuned — the framework treats this as scheduled maintenance of its own assumptions, not a fixed liability.</li>
 </ul>

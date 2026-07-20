@@ -19,13 +19,28 @@ a prediction; the CI run is the record. Do not merge on a red gate.
 ## Working method
 1. **Spec first.** Non-trivial work starts from a spec in `leitwerk/specs/`
    (template: `core/templates/spec.template.md`, shipped with the CLI). It states the observable
-   contract, the invariants touched, and the blast-radius tier.
+   contract, the invariants touched, and the blast-radius tier. Research before
+   writing: read the files the task mentions fully, verify facts in the code
+   (`file:line`, tagged CONFIRMED/INFERRED), and record design decisions —
+   chosen approach and rejected alternatives — in the spec; escalate a design
+   dimension only when the test in item 6 fires.
 2. **Plan into gated steps.** Each step leaves the gate green on its own.
+   Verify every file/symbol reference against the code before it enters the
+   plan; keep each step's status line current (`[x]` done, `[~]` deviated —
+   one line why) so a cold session can resume from the plan.
 3. **Write the oracle before new behaviour.** Bugs get a failing regression test
    first; untested legacy gets characterization tests before it is touched.
 4. **Verify at the step's tier.** `leitwerk tier <path>` tells you the tier.
 5. **Surface drift, do not resolve it.** If code and spec disagree and you can't
    tell which is right, stop and flag it for a human.
+6. **Escalate decisions, not questions.** Ask the human only for intent, scope,
+   and priorities; for anything that would weaken a guarantee (thresholds,
+   checks, tiers); or to accept irreversible risk (T2 sign-off). Everything
+   else: decide, record it in the spec's Design decisions, keep it reversible;
+   use the specialist roles for domain judgment. Escalations carry options,
+   evidence, and a recommendation — durable ones as `leitwerk/proposals/` files.
+   The gate's `lifecycle` warning re-surfaces open proposals on every run;
+   work the inbox off at review.
 
 ## Roles
 Leitwerk defines specialist roles (architect, test-engineer, security-reviewer,
