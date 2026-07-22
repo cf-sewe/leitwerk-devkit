@@ -148,27 +148,44 @@
 
   /* scroll progress bar + section rail */
   #progressbar { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: var(--accent); z-index: 60; transition: width .08s linear; }
-  .spy { position: fixed; right: 16px; top: 50%; transform: translateY(-50%) translateX(10px); z-index: 55; display: flex; flex-direction: column; gap: 1px; padding: 12px 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--rule); box-shadow: 0 8px 30px rgba(0,0,0,.14); opacity: 0; pointer-events: none; transition: opacity .35s ease, transform .35s ease; font-family: var(--sans); }
-  .spy.visible { opacity: 1; pointer-events: auto; transform: translateY(-50%) translateX(0); }
+  .spy { position: fixed; right: 16px; top: 50%; transform: translateY(-50%); z-index: 55; display: flex; flex-direction: column; gap: 1px; padding: 12px 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--rule); box-shadow: 0 8px 30px rgba(0,0,0,.14); font-family: var(--sans); }
   .spy-item { display: flex; align-items: center; justify-content: flex-end; gap: 10px; text-decoration: none; border: 0; padding: 3px 5px; border-radius: 8px; color: var(--ink-faint); }
   .spy-item:hover { background: var(--accent-soft); }
   .spy-num { font-size: 10px; font-variant-numeric: tabular-nums; color: var(--ink-faint); min-width: 15px; text-align: right; }
   .spy-label { font-size: 12px; white-space: nowrap; max-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; text-align: right; color: var(--ink-soft); transition: max-width .35s ease, opacity .3s ease; }
-  .spy.visible .spy-label { max-width: 240px; opacity: 1; }
+  .spy:hover .spy-label { max-width: 240px; opacity: 1; }
   .spy-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rule-strong); flex: 0 0 auto; transition: transform .25s ease, background .25s ease, box-shadow .25s ease; }
   .spy-item.active { color: var(--accent); }
   .spy-item.active .spy-num { color: var(--accent); font-weight: 700; }
   .spy-item.active .spy-label { color: var(--accent); font-weight: 700; }
   .spy-item.active .spy-dot { background: var(--accent); transform: scale(1.3); box-shadow: 0 0 0 4px var(--accent-soft); }
-  @media (max-width: 1200px) { .spy { display: none; } }
+  @media (max-width: 640px) { .spy { display: none; } }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .spy, .spy-label, .spy-dot, #progressbar { transition: none; } }
   .footer { font-family: var(--sans); font-size: 13px; color: var(--ink-faint); margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--rule); }
 
   @media print {
-    .theme-toggle { display: none; }
-    body { font-size: 11pt; background: #fff; color: #000; }
-    h2 { page-break-after: avoid; }
-    .card, figure.fig, table { page-break-inside: avoid; }
+    :root {
+      --bg:#fbfbf9 !important; --panel:#ffffff !important; --panel-2:#f6f5f0 !important;
+      --ink:#1a1a1a !important; --ink-soft:#4a4a4a !important; --ink-faint:#6d6d6d !important;
+      --rule:#e2e0da !important; --rule-strong:#cfccc3 !important; --accent:#0b6b5b !important;
+      --accent-soft:#e6f2ef !important; --warn:#8a5a00 !important; --warn-soft:#fbf1dc !important;
+      --code-bg:#f4f3ee !important; --tier0:#3f78b0 !important; --tier1:#b07a26 !important;
+      --tier2:#b0402a !important; --on-accent:#ffffff !important; --on-accent-soft:rgba(255,255,255,.85) !important;
+    }
+    html { scroll-behavior: auto; }
+    body { background: #fff; color: var(--ink); font-size: 11pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* drop fixed on-screen chrome that would overlap or repeat on paper */
+    .theme-toggle, #progressbar, #scrollspy { display: none !important; }
+    .wrap { padding: 0 24px 24px; }
+    h2 { margin: 1.6em 0 .1em; }
+    /* wide content must not be clipped — print cannot scroll (tables are width:100%) */
+    .scroll { overflow: visible !important; }
+    /* keep atomic blocks whole across page breaks */
+    figure.fig, .card, table, .abstract, .namebox, .note, .evidence, .steps > li, nav.toc {
+      break-inside: avoid; page-break-inside: avoid;
+    }
+    h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
+    * { box-shadow: none !important; }
   }
 </style>
 </head>
@@ -930,15 +947,6 @@ infra/**            = T2
       return { head: h, el: a };
     });
 
-    var hovering = false, idle;
-    function reveal() {
-      spy.classList.add('visible');
-      clearTimeout(idle);
-      idle = setTimeout(function () { if (!hovering) spy.classList.remove('visible'); }, 1500);
-    }
-    spy.addEventListener('mouseenter', function () { hovering = true; spy.classList.add('visible'); clearTimeout(idle); });
-    spy.addEventListener('mouseleave', function () { hovering = false; reveal(); });
-
     function update() {
       var doc = document.documentElement;
       var st = window.pageYOffset || doc.scrollTop;
@@ -957,7 +965,7 @@ infra/**            = T2
     window.addEventListener('scroll', function () {
       if (!ticking) {
         ticking = true;
-        requestAnimationFrame(function () { update(); reveal(); ticking = false; });
+        requestAnimationFrame(function () { update(); ticking = false; });
       }
     }, { passive: true });
     window.addEventListener('resize', update, { passive: true });
