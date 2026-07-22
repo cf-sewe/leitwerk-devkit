@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" width="720" height="400" role="img" aria-label="Leitwerk — the full whitepaper">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f1430"/>
+      <stop offset="1" stop-color="#141d33"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.85" cy="0.12" r="0.65">
+      <stop offset="0" stop-color="#37c8a8" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#37c8a8" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+    <clipPath id="card"><rect x="1" y="1" width="718" height="398" rx="22"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#card)">
+    <rect x="1" y="1" width="718" height="398" fill="url(#bg)"/>
+    <rect x="1" y="1" width="718" height="398" fill="url(#grid)"/>
+    <rect x="1" y="1" width="718" height="398" fill="url(#glow)"/>
+  </g>
+  <rect x="1" y="1" width="718" height="398" rx="22" fill="none" stroke="#37c8a8" stroke-opacity="0.32" stroke-width="1.5"/>
+
+  <text x="48" y="66" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" letter-spacing="3.5" fill="#37c8a8">WHITEPAPER</text>
+  <rect x="48" y="78" width="62" height="3" rx="1.5" fill="#37c8a8"/>
+  <text x="672" y="66" text-anchor="end" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14" letter-spacing="1" fill="#6b769c">in depth</text>
+
+  <text x="46" y="158" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="46" font-weight="700" fill="#f5f8ff">The full design</text>
+  <text x="48" y="196" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="17" fill="#98a3c7">Architecture, evidence, and the tier model — in depth.</text>
+
+  <!-- tier matrix: checks scale by blast radius (T0 -> T1 -> T2) -->
+  <g>
+    <rect x="48"  y="232" width="26" height="26" rx="5" fill="#0c1024" stroke="#37c8a8" stroke-opacity="0.30"/>
+    <rect x="48"  y="268" width="26" height="26" rx="5" fill="#0c1024" stroke="#37c8a8" stroke-opacity="0.30"/>
+    <rect x="48"  y="304" width="26" height="26" rx="5" fill="#37c8a8" fill-opacity="0.85"/>
+
+    <rect x="84"  y="232" width="26" height="26" rx="5" fill="#0c1024" stroke="#37c8a8" stroke-opacity="0.30"/>
+    <rect x="84"  y="268" width="26" height="26" rx="5" fill="#37c8a8" fill-opacity="0.85"/>
+    <rect x="84"  y="304" width="26" height="26" rx="5" fill="#37c8a8" fill-opacity="0.85"/>
+
+    <rect x="120" y="232" width="26" height="26" rx="5" fill="#37c8a8" fill-opacity="0.85"/>
+    <rect x="120" y="268" width="26" height="26" rx="5" fill="#37c8a8" fill-opacity="0.85"/>
+    <rect x="120" y="304" width="26" height="26" rx="5" fill="#37c8a8" fill-opacity="0.85"/>
+
+    <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#6b769c" text-anchor="middle">
+      <text x="61"  y="352">T0</text>
+      <text x="97"  y="352">T1</text>
+      <text x="133" y="352">T2</text>
+    </g>
+  </g>
+
+  <!-- long-read motif -->
+  <g fill="#ffffff" fill-opacity="0.10">
+    <rect x="220" y="240" width="200" height="8" rx="4"/>
+    <rect x="220" y="258" width="168" height="8" rx="4"/>
+    <rect x="220" y="276" width="205" height="8" rx="4"/>
+    <rect x="220" y="294" width="150" height="8" rx="4"/>
+    <rect x="220" y="312" width="188" height="8" rx="4"/>
+  </g>
+
+  <rect x="430" y="332" width="230" height="42" rx="21" fill="#37c8a8" fill-opacity="0.14" stroke="#37c8a8" stroke-opacity="0.55"/>
+  <text x="454" y="359" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" fill="#9ff0dd">Read the whitepaper →</text>
+</svg>
