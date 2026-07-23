@@ -45,12 +45,15 @@ tracks *open work*, not history, so it does not grow without bound.
   flight, archived = landed and gone from here) and from git — never asserted
   here; an item's own acceptance is its status probe.
 
-Ownership is two-class (`leitwerk/tiers.conf`): this file is **human-confirmed** —
-an agent may edit it, but every diff is surfaced for explicit human confirmation
-(the guard's `ask` route). The human owns priority and scope; the confirm is where
-that ownership is exercised. Guarantee-bearing files (`constitution.md`,
-`tiers.conf`) stay **human-owned** — hard-blocked, changed only by a human from a
-proposal.
+This file is **agent-editable** — deliberately not in the guard's deny-list
+(`leitwerk/tiers.conf` `[human-owned]`). An agent edits it directly; the human
+gates the change through the normal per-edit approval (in Claude Code the diff is
+shown for confirmation) and through review — so the human still decides every
+change and owns priority and scope, without a proposal round-trip.
+Guarantee-bearing files (`constitution.md`, `tiers.conf`) stay **human-owned**:
+hard-blocked, changed only by a human from a proposal. (A hook that *forces* the
+confirmation even in auto-accept modes — `guard-confirm-class` — was considered
+and deferred as unneeded.)
 
 ## Backlog
 
@@ -258,18 +261,6 @@ is the binding constraint.
   Line added to `spec.template.md` and the `leitwerk-spec` skill.
 - *Acceptance:* a spec whose `Roadmap:` slug is absent here reds `lifecycle`;
   landed/active/open is derivable for every item without reading stored status.
-
-**guard-confirm-class** · tier **T2** (`core` guard + Claude hook + policy)
-- *Intent:* mechanize the mechanical-vs-judgment edit split the constitution
-  already states (Decision routing), so the agent maintains the living roadmap
-  under per-edit human confirmation — without weakening the guarantee files.
-- *Mechanism:* `leitwerk guard` returns an ownership *class* — `owned`
-  (`[human-owned]`) / `confirm` (`[human-confirmed]`) / none; the `PreToolUse`
-  hook maps owned→deny, confirm→`ask`, none→allow. `roadmap.md` moves to
-  `[human-confirmed]` **after** this lands (moving it earlier fails open).
-- *Acceptance:* `constitution.md`/`tiers.conf` edits stay denied; a `roadmap.md`
-  edit surfaces an in-session confirm and applies on approval; `selftest` covers
-  the three classes; live `ask` behaviour verified in plugin-live-validation.
 
 ### Measure the framework itself
 
