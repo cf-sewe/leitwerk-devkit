@@ -20,29 +20,46 @@ Lifecycle of a roadmap item:
 3. **Built** — `leitwerk-build` implements each step; `leitwerk verify` must be
    green at the step's tier before it lands.
 4. **Reviewed** — `leitwerk-review` runs the tier's roles and confirms the spec
-   still matches the code, then the change merges on a green gate.
+   still matches the code; the change merges on a green gate, the spec archives,
+   and the item leaves this file.
 
-This file is human-owned, like the constitution: agents may propose entries or
-reorder by evidence, but the human owns priority. Completed items move to the
-constitution's decisions of record.
+This file is a **living worklist of open (not-yet-landed) work** — the ordered
+set of future specs plus whatever is currently in flight. It holds every item
+that has not yet landed; an item **leaves** only when it **lands** and its durable
+record moves to `leitwerk/specs/archive/<slug>.md`. A not-started item has no spec
+yet; an in-flight item has an *active* spec (`leitwerk/specs/<slug>.md`) that
+carries its detail while the roadmap keeps its place in the order. Its length
+tracks *open work*, not history, so it does not grow without bound.
 
-> **Proposed decision of record (needs human acceptance):** add "roadmap =
-> ordered backlog of future specs" to the framework's artifact model, and record
-> it in `leitwerk/constitution.md`. Per the constitution's own rule, an agent may
-> not edit it unilaterally — this is the proposal.
+- **Identity is the slug** — the bolded name that leads each item (`cli-publish`),
+  not a number. There are no per-item numbers: a spec links to its item by slug
+  (`Roadmap: <slug>`), commits scope by it, and reordering is just moving a line —
+  nothing to renumber, nothing to collide. Order is the item's *position*;
+  grouping is the phase section it sits under.
+- **Items are thin**: one line of intent, an acceptance sketch, a tier estimate.
+  Full Problem/Behaviour/Acceptance detail belongs in the spec at promotion.
+- **State durable intent, never world-state.** "no remote repo yet" / "has never
+  run" are status snapshots that rot behind the guard and mislead (`ci-live` did
+  exactly this). Write the *gap* and the *acceptance* that closes it. **Status is
+  derived** — from where an item's spec sits (none = not started, active spec = in
+  flight, archived = landed and gone from here) and from git — never asserted
+  here; an item's own acceptance is its status probe.
+
+Ownership is two-class (`leitwerk/tiers.conf`): this file is **human-confirmed** —
+an agent may edit it, but every diff is surfaced for explicit human confirmation
+(the guard's `ask` route). The human owns priority and scope; the confirm is where
+that ownership is exercised. Guarantee-bearing files (`constitution.md`,
+`tiers.conf`) stay **human-owned** — hard-blocked, changed only by a human from a
+proposal.
 
 ## Backlog
 
 Tiers refer to `leitwerk/tiers.conf`. Order is by leverage: make the claims true
 before making it broadly adoptable.
 
-### Milestone 1 — make the framework's claims true
+### Adoptable
 
-_Complete — all items landed; see "Recently decided (done)" below._
-
-### Milestone 2 — make it adoptable
-
-**M2.1 · cli-publish** · tier **T1**
+**cli-publish** · tier **T1**
 - *Problem:* the gate is distributed only as source; adopters and CI build it
   via `go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest`,
   which resolves only once the repository is public. Confirmed constraint: a
@@ -57,7 +74,7 @@ _Complete — all items landed; see "Recently decided (done)" below._
 - *Acceptance:* a clean machine can obtain the binary (go install or release
   download) and run `leitwerk verify` in an unrelated repo.
 
-**M2.2 · plugin-live-validation** · process (no tier — validation, not a code change)
+**plugin-live-validation** · process (no tier — validation, not a code change)
 - *Problem:* the plugin, skills, agents, and the review **workflow** are written
   but never run in a live Claude Code session; their composition is inferred,
   not proven.
@@ -69,29 +86,30 @@ _Complete — all items landed; see "Recently decided (done)" below._
   via the workflow), the gate blocks a red turn-end, and a green change lands.
   Findings feed back into the skills/agents/workflow (bidirectional refinement).
 
-**M2.3 · ci-live** · tier **T2** (`.github/`)
-- *Problem:* the CI workflow has never executed (no remote repo yet).
-- *Behaviour:* push to `cf-sewe`, run the gate as a required check on a PR, and
-  confirm tier selection from the diff works on GitHub's runner.
-- *Acceptance:* a PR with a T2 change is blocked until the gate is green.
+**ci-live** · tier **T2** (`.github/`)
+- *Intent:* make the CI gate the binding **merge** constraint — running in CI is
+  not enough until `main` is branch-protected with the `leitwerk gate` check
+  *required*.
+- *Acceptance:* a PR with a T2 change cannot merge until the gate is green (tier
+  from the PR diff); a docs-only PR selects T0.
 
-**M2.5 · plugin-bootstrap** · tier **T1** (optional `selftest`-backed `selfupdate` is T2)
-- *Problem:* after M2.1 the gate binary is obtainable, but only by a **manual**
-  `go install` / release download. A Claude Code marketplace install sparse-
-  copies only the plugin dir, so the launcher cannot reach a sibling `core/`
-  (`bindings/claude/bin/leitwerk` resolution order, CONFIRMED); and a plugin
-  update leaves whatever binary was fetched earlier **stale**. There is no
+**plugin-bootstrap** · tier **T1** (optional `selftest`-backed `selfupdate` is T2)
+- *Problem:* after cli-publish the gate binary is obtainable, but only by a
+  **manual** `go install` / release download. A Claude Code marketplace install
+  sparse-copies only the plugin dir, so the launcher cannot reach a sibling
+  `core/` (`bindings/claude/bin/leitwerk` resolution order, CONFIRMED); and a
+  plugin update leaves whatever binary was fetched earlier **stale**. There is no
   plugin-side path that provisions or refreshes the core binary — the adopter
   still obtains it by hand.
 - *Behaviour:* provisioning is an **LLM-orchestrated onboarding step, not a hand-
   rolled cross-OS script** (a static bootstrap script rots across
   OS/arch/toolchains; the LLM adapts, a deterministic contract keeps it honest):
   - **Single path — download the matching release asset from the GitHub repo**
-    (stable names + `checksums.txt`, the M2.1 contract) and **verify its sha256
-    before `chmod +x`**, showing the compare result; place it where the launcher
-    already resolves it, with **no env var** required. This needs no Go toolchain
-    and installs the exact CI-built, tested artifact rather than a locally
-    recompiled one.
+    (stable names + `checksums.txt`, the cli-publish contract) and **verify its
+    sha256 before `chmod +x`**, showing the compare result; place it where the
+    launcher already resolves it, with **no env var** required. This needs no Go
+    toolchain and installs the exact CI-built, tested artifact rather than a
+    locally recompiled one.
   - a `SessionStart` detection compares the **installed** version (`leitwerk
     version`, the ldflags tag) against the **expected** version — the plugin's own
     `plugin.json` `version`, read locally from the plugin dir (relative to the
@@ -126,19 +144,20 @@ _Complete — all items landed; see "Recently decided (done)" below._
   tampered asset is refused by the integrity check; after a simulated plugin
   version bump the `SessionStart` detection reports the drift and points to the
   re-provision step.
-- *Depends:* M2.1 (public releases + the stable asset/`checksums.txt` contract).
-  *Relates:* M2.2 (live validation would exercise this path).
+- *Depends:* cli-publish (public releases + the stable asset/`checksums.txt`
+  contract). *Relates:* plugin-live-validation (live validation would exercise
+  this path).
 - *Roles/skills:* `architect` (provisioning topology + plugin↔core version
   coupling), `security-reviewer` (download/verify path + no-silent-exec), 
   `test-engineer` (version-mismatch / integrity-refusal cases).
 
-### Milestone 3 — verification depth
+### Verification depth
 
-**M3.1 · erosion-budgets** · tier **T2** — make `erosion.sh` enforce real
+**erosion-budgets** · tier **T2** — make `erosion.sh` enforce real
 complexity/duplication ceilings instead of skipping when no analyzer is present;
 define default budgets in the constitution.
 
-**M3.2 · verification-helpers & test-quality floor** · tier **T2** (`core` + checks)
+**verification-helpers** · tier **T2** (`core` + checks)
 - *Problem:* a check that *runs* is not tests that *assert*. `tests` can pass
   vacuously — `go test ./...` with no tests, or AI-written tests that reach high
   line coverage while asserting nothing meaningful. The whitepaper names a
@@ -152,29 +171,30 @@ define default budgets in the constitution.
     execute tests exercising the changed code, not pass with zero relevant tests;
   - a **mutation-score floor** at T1+ (per the whitepaper): inject faults into the
     changed code, require the suite to catch them, red below the floor. Scoped to
-    the changed set to bound cost (composes with M3.5), full score as a periodic
-    run. Default floors live in the constitution (human-owned), like M3.1 budgets;
+    the changed set to bound cost (composes with monorepo-affected-scope), full
+    score as a periodic run. Default floors live in the constitution (human-owned),
+    like the erosion-budgets defaults;
   - scaffolds for property, mutation, and characterization tests so
     `leitwerk-build` has concrete oracles to reach for rather than prose.
 - *Acceptance:* on a fixture, a suite that passes vacuously (delete a test / strip
   an assertion on the changed code) turns the gate red via the guard/floor; a
   load-bearing suite passes; where no mutation tooling is present the floor skips
-  with a visible note until made required (M3.6).
-- *Boundary:* M3.2 = "a check that ran is *meaningful* (quality)"; M3.6 = "the
-  check *ran* at all (presence/completeness)"; M3.1 = code health (complexity/
-  duplication) — three separate axes.
+  with a visible note until made required (required-checks).
+- *Boundary:* verification-helpers = "a check that ran is *meaningful* (quality)";
+  required-checks = "the check *ran* at all (presence/completeness)";
+  erosion-budgets = code health (complexity/duplication) — three separate axes.
 - *Roles/skills:* `test-engineer` (floor + oracle scaffolds), `architect`
-  (scoping vs M3.5; where the periodic full run lives).
+  (scoping vs monorepo-affected-scope; where the periodic full run lives).
 
-**M3.3 · provenance-tooling** — turn CONFIRMED/INFERRED/GAP from a review
+**provenance-tooling** — turn CONFIRMED/INFERRED/GAP from a review
 convention into something the review output actually carries and the gate can
 check for (e.g. no GAP left on a T2 change without a human sign-off).
 
-**M3.4 · open-code-live-validation** — the M2.2 equivalent for Codex/AGENTS.md:
-drive one change under an open-code agent and confirm the CI gate is the binding
-constraint.
+**open-code-live-validation** — the plugin-live-validation equivalent for
+Codex/AGENTS.md: drive one change under an open-code agent and confirm the CI gate
+is the binding constraint.
 
-**M3.5 · monorepo-affected-scope** · tier **T2** (`core/bin/leitwerk` + checks) ·
+**monorepo-affected-scope** · tier **T2** (`core/bin/leitwerk` + checks) ·
 *proposed (agent-suggested, needs human priority)*
 - *Problem:* the gate is diff-aware only for **tier selection**; the checks
   themselves run project-wide (`go test ./...`, `tsc`, …). On a monorepo that
@@ -200,7 +220,7 @@ constraint.
 - *Roles/skills:* `architect` (affected-set model + boundary policy),
   `test-engineer` (fixture + `selftest` cases for scope correctness).
 
-**M3.6 · required-checks** · tier **T2**
+**required-checks** · tier **T2**
 - *Problem:* a check that skips at T2 — `sast` when semgrep is absent, or a repo
   with a `go.mod` but no linter tool installed — leaves the gate green; "a
   skipped security check on a T2 change is a blocker" is role prose, not
@@ -213,10 +233,10 @@ constraint.
   gaps are visible rather than silent.
 - *Acceptance:* scenario/`selftest` case: empty toolchain at T2 with `sast`
   required → exit 1; with the tool installed → normal pass/fail.
-- *Boundary:* M3.6 = "the check *runs* (presence/completeness)"; the *quality* of
-  a check that ran (vacuous / mutation-score) is M3.2.
+- *Boundary:* required-checks = "the check *runs* (presence/completeness)"; the
+  *quality* of a check that ran (vacuous / mutation-score) is verification-helpers.
 
-**M3.7 · repo-map** · tier **T2** (core) — design-proposal open decision O2
+**repo-map** · tier **T2** (core) — design-proposal open decision O2
 - *Problem:* the research step retrieves via scouts running grep/glob; P4
   (retrieve-don't-preload) calls for a structural symbol map, and context-rot
   evidence says preloading does not scale with repo size.
@@ -228,9 +248,32 @@ constraint.
   incrementally and stale entries are detectable.
 - *Roles/skills:* `architect` (map format/CLI surface), `test-engineer`.
 
-### Milestone 4 — measure the framework itself
+**roadmap-spec-join** · tier **T2** (`core` + checks)
+- *Intent:* derive each item's status from the spec lifecycle, not hand-written
+  prose, via an explicit machine-checked roadmap↔spec link.
+- *Mechanism:* a spec declares `Roadmap: <slug>`; `lifecycle` resolves an
+  **active** spec's slug against this file (orphan = red), exempting archived
+  specs (as `drift` does — a landed item has left the roadmap). Status is one pass
+  over `specs/`: active spec = in flight, archived = landed, no spec = not started.
+  Line added to `spec.template.md` and the `leitwerk-spec` skill.
+- *Acceptance:* a spec whose `Roadmap:` slug is absent here reds `lifecycle`;
+  landed/active/open is derivable for every item without reading stored status.
 
-**M4.1 · efficiency-evaluation** · process (periodic, not per-change)
+**guard-confirm-class** · tier **T2** (`core` guard + Claude hook + policy)
+- *Intent:* mechanize the mechanical-vs-judgment edit split the constitution
+  already states (Decision routing), so the agent maintains the living roadmap
+  under per-edit human confirmation — without weakening the guarantee files.
+- *Mechanism:* `leitwerk guard` returns an ownership *class* — `owned`
+  (`[human-owned]`) / `confirm` (`[human-confirmed]`) / none; the `PreToolUse`
+  hook maps owned→deny, confirm→`ask`, none→allow. `roadmap.md` moves to
+  `[human-confirmed]` **after** this lands (moving it earlier fails open).
+- *Acceptance:* `constitution.md`/`tiers.conf` edits stay denied; a `roadmap.md`
+  edit surfaces an in-session confirm and applies on approval; `selftest` covers
+  the three classes; live `ask` behaviour verified in plugin-live-validation.
+
+### Measure the framework itself
+
+**efficiency-evaluation** · process (periodic, not per-change)
 - *Problem:* deterministic proxies are gated (the `context` budget check), but
   outcome efficiency — tokens-to-green-gate, wall time to a landed change,
   human interventions per change — is unmeasured, and no off-the-shelf
@@ -242,66 +285,6 @@ constraint.
   terminal-agent suites (Terminal-Bench-class) with cost reporting.
 - *Acceptance:* a first dated report in `docs/reviews/` comparing the two arms
   on cost and outcome.
-
-## Recently decided (done)
-- **Aligned with Claude Code steering guidance.** Turned prose prohibitions into
-  mechanism: `leitwerk guard` (core) + a `PreToolUse` hook block edits to
-  human-owned files; a path-scoped `.claude/rules/` rule carries T2 discipline; a
-  small `CLAUDE.md` bridges a session to the constitution with procedures left in
-  skills. Rules/CLAUDE.md are repo-level (not plugin-packageable) → `leitwerk
-  init` scaffolds them, templates in `core/templates/`. Guard is a guardrail; the
-  gate stays the hard guarantee (parity intact). Tested (guard + hook + selftest).
-  See `leitwerk/specs/archive/steering-alignment.md`.
-- **Open-code guarantee-parity guarded by construction.** Split compatibility
-  into guarantee-parity (must hold) vs ergonomics-parity (don't chase). Added the
-  `parity` structural check (fails if gate logic leaks into a binding), a
-  constitution invariant, and a CI job that runs the core gate with no agent
-  runtime. Negative-tested. Live open-code validation stays deferred to **M3.4**
-  (do when stable). See `leitwerk/specs/archive/open-code-parity.md`.
-- **Layer-2 orchestration → native dynamic workflows.** Retired the hand-rolled
-  orchestrator role; roles reused as workflow `agentType`s; added
-  `.claude/workflows/leitwerk-review.mjs`; review scales by tier; workflow
-  verification is soft, the external gate stays authoritative. See
-  `leitwerk/specs/archive/workflow-orchestration.md` and the constitution's decisions.
-  (The JS syntax check for workflow scripts landed — `selftest` §9; see
-  `leitwerk/specs/archive/workflow-syntax-check.md`.)
-- **M1.1 · drift-detection — done (2026-07-20).** `drift` is real: specs declare
-  `## Anchors` (`path`/`path#symbol`); unresolved anchors are red, one-sided
-  spec/code change is red under a diff base, archived specs are ignored, and
-  anchor paths are confined (untrusted input). See
-  `leitwerk/specs/archive/drift-detection.md`.
-- **M1.2 · reference-app-real — done (2026-07-20).** `examples/reference-app` is
-  a minimal Go app with a spec, a real test the gate runs, and a T2 migration;
-  `selftest` §4 runs its tests and scenario `s6` proves broken→red. Unblocks
-  M1.5. See `leitwerk/specs/archive/reference-app-real.md`.
-- **M1.4 · spec-lifecycle — done (2026-07-20).** Terminal states enforced by the
-  `lifecycle` check, archived specs ignored by `drift` (via M1.1), the landing
-  "dreaming" pass practiced at review; a mechanized periodic sweep stays a
-  practice, not a tool. See `leitwerk/specs/archive/lifecycle-check.md` and the
-  constitution's decisions.
-- **M1.5 · bugfix-workflow — done (2026-07-20).** Workflow C (whitepaper §8.3) is
-  a first-class entry path: the `leitwerk-fix` skill (reproduce → pin → fix at
-  tier, composing `test-engineer`), with `bindings/open/AGENTS.md` mirroring the
-  method, proven by `examples/scenarios/s7-bugfix.sh` — a defect that escapes the
-  suite stays green until a regression test pins it (gate red), then the fix
-  greens it. See `leitwerk/specs/archive/bugfix-workflow.md`.
-- **M1.3 · selftest-coverage — done (2026-07-20).** Acceptance was already met by
-  the Go suite `selftest` §0 runs (mutating the glob translation or the tier
-  table fails `go test`); this hardened the real residuals — the shipped **T1**
-  checks line (an agent-editable file, previously unpinned), `[paths]`
-  first-match ordering, the observable `verify` `checks:` line, and the CLI's
-  T1 fallback. See `leitwerk/specs/archive/selftest-coverage.md`.
-- **M2.4 · verify --auto — done (2026-07-20).** `leitwerk verify --auto` derives
-  the blast-radius tier from the git diff inside the CLI (`--base <ref>` for a
-  range, else working-tree ∪ untracked); the plugin Stop hook and CI use it (the
-  CI shell rank-loop is gone), while this repo's own hook stays pinned T2. The
-  base is flag-only — `--auto` does not read `LEITWERK_DIFF_BASE` — so an ambient
-  value can't flip its semantics; drift Part-2 wiring stays deferred to M2.3.
-  See `leitwerk/specs/archive/verify-auto.md`.
-- **Bash portability & workflow syntax (2026-07-20).** The gate's own checks run
-  on macOS bash 3.2 (no `mapfile`), and `selftest` syntax-checks workflow
-  `.mjs`. See `leitwerk/specs/archive/bash-portability.md` and
-  `leitwerk/specs/archive/workflow-syntax-check.md`.
 
 ## Not planned (explicit non-goals for now)
 - A bespoke spec DSL — specs stay Markdown.
