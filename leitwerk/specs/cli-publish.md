@@ -2,7 +2,9 @@
 
 Status: active (2026-07-23) <!-- draft → active → landed YYYY-MM-DD → superseded by <slug> -->
 
-Promotes roadmap item **M2.1 · cli-publish** from proto-spec to spec. This is the
+Roadmap: cli-publish
+
+Promotes the `cli-publish` roadmap item from proto-spec to spec. This is the
 release mechanism for the `leitwerk` gate binary.
 
 ## Problem

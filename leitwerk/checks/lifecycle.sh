@@ -12,6 +12,7 @@ set -euo pipefail
 
 SPEC_DIR="${LEITWERK_SPECS:-leitwerk/specs}"
 [ -d "$SPEC_DIR" ] || { echo "no specs tracked ($SPEC_DIR)"; exit 2; }
+ROADMAP="${LEITWERK_ROADMAP:-leitwerk/roadmap.md}"
 
 fail=0
 active=0
@@ -46,6 +47,26 @@ while IFS= read -r f; do
       landed|superseded)
         echo "lifecycle: $rel is $st but not in archive/ (dream pass missing)"; fail=1 ;;
       active) active=$((active + 1)) ;;
+    esac
+  fi
+
+  # roadmap<->spec join (roadmap-spec-join): an active/draft change record may
+  # name the roadmap item it realizes as `Roadmap: <slug>`; the slug must be an
+  # open item (`**<slug>**`) in the roadmap. Archived specs are exempt (a landed
+  # item has left the roadmap, mirroring drift). A `<slug>` placeholder or any
+  # non-slug value is ignored, so a fresh draft never goes red.
+  if [ "$in_archive" -eq 0 ]; then
+    case "$f" in
+      *.plan.md) ;;
+      *)
+        rslug="$(awk '/^Roadmap:/ { sub(/^Roadmap:[[:space:]]*/, ""); print $1; exit }' "$f")"
+        case "$rslug" in
+          "" | *[!a-z0-9-]*) ;;
+          *)
+            if [ -f "$ROADMAP" ] && ! grep -qE "^\*\*${rslug}\*\*( |\$)" "$ROADMAP"; then
+              echo "lifecycle: $rel declares Roadmap: $rslug, not an open item in ${ROADMAP##*/}"; fail=1
+            fi ;;
+        esac ;;
     esac
   fi
 

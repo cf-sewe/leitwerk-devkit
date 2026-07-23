@@ -121,6 +121,28 @@ if [ -x "$LC" ]; then
   if [ "$rc" -ne 2 ]; then
     echo "FAIL: lifecycle with no specs dir = exit $rc, want 2 (skip)" >&2; fail=1
   fi
+  # roadmap<->spec join (roadmap-spec-join): a spec's `Roadmap:` slug must resolve
+  # to an open roadmap item; archived exempt; placeholder/non-slug/absent ignored.
+  mkdir -p "$lc_tmp/rj/archive"
+  printf '# Roadmap\n\n**wired-item**\n' > "$lc_tmp/rj_roadmap.md"
+  rj() { LEITWERK_SPECS="$lc_tmp/rj" LEITWERK_ROADMAP="$lc_tmp/rj_roadmap.md" "$LC" >/dev/null 2>&1; }
+  printf 'Status: active (2026-07-19)\nRoadmap: wired-item\n' > "$lc_tmp/rj/joined.md"
+  if ! rj; then
+    echo "FAIL: lifecycle red on a spec whose Roadmap slug resolves" >&2; fail=1
+  fi
+  printf 'Status: active (2026-07-19)\nRoadmap: ghost-item\n' > "$lc_tmp/rj/orphan.md"
+  if rj; then
+    echo "FAIL: lifecycle green on a spec whose Roadmap slug is not an open item" >&2; fail=1
+  fi
+  rm -f "$lc_tmp/rj/orphan.md"
+  printf 'Status: landed (2026-07-19)\nRoadmap: ghost-item\n' > "$lc_tmp/rj/archive/gone.md"
+  if ! rj; then
+    echo "FAIL: lifecycle red on an archived spec with an unresolved Roadmap slug (should be exempt)" >&2; fail=1
+  fi
+  printf 'Status: draft (2026-07-19)\nRoadmap: <slug>\n' > "$lc_tmp/rj/placeholder.md"
+  if ! rj; then
+    echo "FAIL: lifecycle red on an unfilled Roadmap placeholder (<slug>)" >&2; fail=1
+  fi
   rm -rf "$lc_tmp"
 else
   echo "FAIL: leitwerk/checks/lifecycle.sh missing or not executable" >&2; fail=1

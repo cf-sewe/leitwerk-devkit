@@ -21,7 +21,10 @@ the code; the gate keeps it honest.
    Never ask the human what the repo can answer.
 2. Copy `core/templates/spec.template.md` into `leitwerk/specs/<slug>.md`. It
    starts `draft`; only the human's approval flips it to `active` — before
-   that it is not contract.
+   that it is not contract. If this spec realizes a roadmap item, set its
+   `Roadmap: <slug>` line to that item's slug (a change record); delete the line
+   for a living contract. `lifecycle` reds a present slug that is not an open
+   roadmap item, so status stays derivable from the spec, not written prose.
 3. **Problem** — what is wrong/missing and for whom; link the request.
 4. **Behaviour** — given/when/then, including what must NOT happen and the edge
    cases. This is the part reviewers read instead of the diff.
