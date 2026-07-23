@@ -16,6 +16,17 @@ from the repository. Label every fact derived from the code CONFIRMED (verified
 by reading/running) / INFERRED (reasoned) / GAP (unknown); INFERRED and GAP
 need human validation before they gain authority.
 
+**New/empty repo vs brownfield — pick the path first.** The numbered steps are
+the *brownfield* survey path (there is existing code to understand). On a **new or
+empty repo there is nothing to survey** — do not invent a structure. Go
+intent-first: run `leitwerk init`, then hold the *constitution interview*
+(whitepaper §8.1 step 1 — stack, principles, tier rules, boundaries) and set the
+`[paths]` tiers from that declared intent. Path globs match files that do not
+exist yet (`**/db/migrations/** = T2` fires the moment the first migration lands),
+and checks skip cleanly until a toolchain is wired — so the concrete tier map,
+real checks, and characterization tests **accrete per change** through the normal
+spec→plan→build loop, not up front. Steps 2 and 4 below then apply as code arrives.
+
 ## Steps
 1. **Scaffold** if absent: run `leitwerk init` to create `leitwerk/constitution.md`
    and `leitwerk/tiers.conf` from the templates.
@@ -34,6 +45,14 @@ need human validation before they gain authority.
    project needs. Keep it to non-obvious facts. The human reviews and owns it.
 6. **Prove it.** Run `leitwerk verify --tier T2` and confirm it executes end to
    end. Report what is enforced vs. still skipped.
+
+**A pre-existing `specs/` (or other docs) in another structure.** `leitwerk/` is
+a *namespaced, additive* layer: `leitwerk init` never migrates or touches an
+existing top-level `specs/`, and `drift` only tracks anchors under
+`leitwerk/specs/`. Do not bulk-convert. Keep the project's own specs as they are
+and use `leitwerk/specs/` for new work; if the human wants an existing spec under
+the gate, convert *that one* to the Leitwerk shape (Problem / Behaviour / Anchors)
+when a change next touches its area — strangler-fig, never big-bang.
 
 Hand back a short summary: what is now gated, what tiers map where, and which
 checks are still stubs needing real tooling.

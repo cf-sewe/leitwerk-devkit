@@ -15,7 +15,9 @@ Phase 0 → 3 rollout.
    and `.claude/workflows/leitwerk-review.mjs` (these are repo-level; a plugin
    cannot carry them).
 3. Edit `tiers.conf` so real irreversible paths (migrations, IaC, auth, billing)
-   are T2, and confirm the `[human-owned]` list names your policy files.
+   are T2, and confirm the `[human-owned]` list names your policy files. On a
+   new/empty repo, set these from the *intended* architecture — path globs match
+   files that do not exist yet, so the policy is ready before the code is.
 4. Wire `core/checks/*` to the project's real build/test/lint (SAST for T2).
 5. Add `bindings/open/ci/leitwerk-verify.yml` to `.github/workflows/` and make
    "leitwerk gate" a required status check.
@@ -26,7 +28,11 @@ adds agent ergonomics on top.
 ## Phase 1 — the constitution + specs
 Fill `leitwerk/constitution.md` (invariants, DoD, roles). Start writing specs in
 `leitwerk/specs/` for new work. For brownfield code, add characterization tests
-around risky areas before changing them.
+around risky areas before changing them. A repo that already has its own `specs/`
+(or docs) in another format is fine — `leitwerk/` is a separate, additive
+namespace, nothing migrates it, and `drift` only tracks `leitwerk/specs/`. Convert
+an existing spec to the Leitwerk shape only when a change next touches its area
+(strangler-fig), never in bulk.
 
 ## Phase 2 — Claude Code binding
 `/plugin marketplace add cf-sewe/leitwerk-devkit` then
