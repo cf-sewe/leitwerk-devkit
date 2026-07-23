@@ -75,15 +75,96 @@ _Complete — all items landed; see "Recently decided (done)" below._
   confirm tier selection from the diff works on GitHub's runner.
 - *Acceptance:* a PR with a T2 change is blocked until the gate is green.
 
+**M2.5 · plugin-bootstrap** · tier **T1** (optional `selftest`-backed `selfupdate` is T2)
+- *Problem:* after M2.1 the gate binary is obtainable, but only by a **manual**
+  `go install` / release download. A Claude Code marketplace install sparse-
+  copies only the plugin dir, so the launcher cannot reach a sibling `core/`
+  (`bindings/claude/bin/leitwerk` resolution order, CONFIRMED); and a plugin
+  update leaves whatever binary was fetched earlier **stale**. There is no
+  plugin-side path that provisions or refreshes the core binary — the adopter
+  still obtains it by hand.
+- *Behaviour:* provisioning is an **LLM-orchestrated onboarding step, not a hand-
+  rolled cross-OS script** (a static bootstrap script rots across
+  OS/arch/toolchains; the LLM adapts, a deterministic contract keeps it honest):
+  - **Single path — download the matching release asset from the GitHub repo**
+    (stable names + `checksums.txt`, the M2.1 contract) and **verify its sha256
+    before `chmod +x`**, showing the compare result; place it where the launcher
+    already resolves it, with **no env var** required. This needs no Go toolchain
+    and installs the exact CI-built, tested artifact rather than a locally
+    recompiled one.
+  - a `SessionStart` detection compares the **installed** version (`leitwerk
+    version`, the ldflags tag) against the **expected** version — the plugin's own
+    `plugin.json` `version`, read locally from the plugin dir (relative to the
+    hook script, the `$SELF_DIR` technique `leitwerk-hook-guard` already uses),
+    **no network**. Any mismatch (after normalising the `v` prefix) surfaces
+    **missing-or-stale** and prompts a re-provision; equal is quiet. The same
+    expected version also names the release **tag to download** (`v<version>`), so
+    provisioning is deterministic and never queries "latest". Network happens only
+    on provisioning, never on detection; **acquisition/execution is never silent**.
+  - *Version coupling (what makes `plugin.json` a valid source of "expected"):*
+    the plugin's version and the core release tag move **together** — the release
+    process bumps `plugin.json` (release-please `extra-files`) or releases both in
+    lockstep. Without that, `plugin.json` could not stand in for the expected core
+    version. (This is the coupling the `architect` role owns, below.)
+  - *Fallback (documented, not automated):* a platform/arch **not** in the release
+    matrix has no prebuilt asset — that user builds from source (`go install
+    …@<version>` or `make -C core build`). Not a primary path; just documented so
+    no one is stranded.
+  - *Optional, separable (tier T2, core):* a `leitwerk selfupdate` subcommand for
+    the update path — it re-runs the same download+verify in-binary and cross-
+    platform; only the first install needs the LLM-orchestrated fetch.
+  - *Provenance (note — not required for v1):* `checksums.txt` ships **inside the
+    same release** as the binary, so it proves the download arrived intact but not
+    that the release itself is authentic — a compromised release/CI pipeline could
+    publish a malicious binary with a matching checksum. **Signing** the release
+    (cosign/minisign) and verifying against a public key shipped in the plugin
+    would close that residual risk. Deferred: GitHub release + checksum over TLS
+    is the widely-used bar (kubectl / gh / terraform); revisit if the threat model
+    or adoption warrants it.
+- *Acceptance:* on a clean machine, `/plugin install` followed by the onboarding
+  step yields a working `leitwerk verify` **without a manual install step**; a
+  tampered asset is refused by the integrity check; after a simulated plugin
+  version bump the `SessionStart` detection reports the drift and points to the
+  re-provision step.
+- *Depends:* M2.1 (public releases + the stable asset/`checksums.txt` contract).
+  *Relates:* M2.2 (live validation would exercise this path).
+- *Roles/skills:* `architect` (provisioning topology + plugin↔core version
+  coupling), `security-reviewer` (download/verify path + no-silent-exec), 
+  `test-engineer` (version-mismatch / integrity-refusal cases).
+
 ### Milestone 3 — verification depth
 
 **M3.1 · erosion-budgets** · tier **T2** — make `erosion.sh` enforce real
 complexity/duplication ceilings instead of skipping when no analyzer is present;
 define default budgets in the constitution.
 
-**M3.2 · verification-helpers** — provide the substance the whitepaper describes:
-scaffolds/guidance for property, mutation, and characterization tests, so
-`leitwerk-build` has concrete oracles to reach for rather than prose.
+**M3.2 · verification-helpers & test-quality floor** · tier **T2** (`core` + checks)
+- *Problem:* a check that *runs* is not tests that *assert*. `tests` can pass
+  vacuously — `go test ./...` with no tests, or AI-written tests that reach high
+  line coverage while asserting nothing meaningful. The whitepaper names a
+  **mutation-score floor** as the T1+ design target ("Mutation score, not line
+  coverage", §9 / Fig. 6), and the constitution invariant "the gate never
+  silently under-verifies" forbids exactly this — but today check honesty is only
+  a review-upheld convention (§9: "the gate cannot verify a check's own honesty").
+  Nothing proves an adopter's tests are load-bearing.
+- *Behaviour:* two enforcement layers, cheapest first, plus the original oracles —
+  - a **non-vacuous guard** (cheap, per change): the `tests` check must actually
+    execute tests exercising the changed code, not pass with zero relevant tests;
+  - a **mutation-score floor** at T1+ (per the whitepaper): inject faults into the
+    changed code, require the suite to catch them, red below the floor. Scoped to
+    the changed set to bound cost (composes with M3.5), full score as a periodic
+    run. Default floors live in the constitution (human-owned), like M3.1 budgets;
+  - scaffolds for property, mutation, and characterization tests so
+    `leitwerk-build` has concrete oracles to reach for rather than prose.
+- *Acceptance:* on a fixture, a suite that passes vacuously (delete a test / strip
+  an assertion on the changed code) turns the gate red via the guard/floor; a
+  load-bearing suite passes; where no mutation tooling is present the floor skips
+  with a visible note until made required (M3.6).
+- *Boundary:* M3.2 = "a check that ran is *meaningful* (quality)"; M3.6 = "the
+  check *ran* at all (presence/completeness)"; M3.1 = code health (complexity/
+  duplication) — three separate axes.
+- *Roles/skills:* `test-engineer` (floor + oracle scaffolds), `architect`
+  (scoping vs M3.5; where the periodic full run lives).
 
 **M3.3 · provenance-tooling** — turn CONFIRMED/INFERRED/GAP from a review
 convention into something the review output actually carries and the gate can
@@ -120,14 +201,20 @@ constraint.
   `test-engineer` (fixture + `selftest` cases for scope correctness).
 
 **M3.6 · required-checks** · tier **T2**
-- *Problem:* a check that skips at T2 (e.g. `sast` when semgrep is absent)
-  leaves the gate green; "a skipped security check on a T2 change is a blocker"
-  is role prose, not mechanism.
+- *Problem:* a check that skips at T2 — `sast` when semgrep is absent, or a repo
+  with a `go.mod` but no linter tool installed — leaves the gate green; "a
+  skipped security check on a T2 change is a blocker" is role prose, not
+  mechanism. This is the **completeness** axis: the checks a tier calls for must
+  be *present and running*, not silently absent.
 - *Behaviour:* `[tiers]` syntax marks checks that may not skip at a tier (e.g.
   `T2 = … sast!`); a skip of a required check turns the gate red with a message
-  naming the missing tool.
+  naming the missing tool. Onboarding additionally flags a language whose
+  conventional check is unwired (marker present, tool absent) so completeness
+  gaps are visible rather than silent.
 - *Acceptance:* scenario/`selftest` case: empty toolchain at T2 with `sast`
   required → exit 1; with the tool installed → normal pass/fail.
+- *Boundary:* M3.6 = "the check *runs* (presence/completeness)"; the *quality* of
+  a check that ran (vacuous / mutation-score) is M3.2.
 
 **M3.7 · repo-map** · tier **T2** (core) — design-proposal open decision O2
 - *Problem:* the research step retrieves via scouts running grep/glob; P4
