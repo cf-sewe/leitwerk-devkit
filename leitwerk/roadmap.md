@@ -262,6 +262,26 @@ is the binding constraint.
 - *Acceptance:* a spec whose `Roadmap:` slug is absent here reds `lifecycle`;
   landed/active/open is derivable for every item without reading stored status.
 
+**lifecycle-core-promotion** · tier **T2** (`core` + checks) — low priority (artifact hygiene, not the code guarantee)
+- *Problem:* the `lifecycle` check ships repo-local only
+  (`leitwerk/checks/lifecycle.sh`), so adopters get the spec/plan lifecycle
+  *convention* (via `spec.template.md` + the skills) but no check that enforces
+  it — the "prose is not a guarantee" gap the framework criticizes, reintroduced
+  for every repo but this one. Its sibling `drift` already ships from `core/`.
+- *Behaviour:* move `lifecycle.sh` into `core/checks/` (embedded via `//go:embed`,
+  like `drift`) so `leitwerk init` gives adopters the check. It already `exit 2`-
+  skips when no specs tree is present, so it stays inert for non-users. Ship it
+  available; whether it enters the adopter default tiers (vs. opt-in) is part of
+  the item.
+- *Acceptance:* a clean adopter fixture with a misplaced `landed` spec reds the
+  gate from the shipped built-in (no repo-local override present); a fixture with
+  no specs tree skips.
+- *Depends:* `roadmap-spec-join` — its `Roadmap:` resolution is repo-relative, so
+  the promoted check must take the roadmap/specs paths from config, not a fixed
+  path.
+- *Roles/skills:* `architect` (core vs. repo-local boundary + default-tier
+  policy), `test-engineer` (`selftest` + adopter fixture).
+
 ### Measure the framework itself
 
 **efficiency-evaluation** · process (periodic, not per-change)
