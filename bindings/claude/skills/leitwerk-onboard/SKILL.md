@@ -33,18 +33,29 @@ spec→plan→build loop, not up front. Steps 2 and 4 below then apply as code a
 2. **Map blast radius.** Survey the tree. Identify irreversible/infra/data paths
    (migrations, IaC, billing, auth) and record them as T2 in `leitwerk/tiers.conf`.
    Everything state-mutating is T1; read-only/display is T0.
-3. **Wire real checks.** Add project checks in the repo's own `leitwerk/checks/`
+3. **Survey coverage, then wire real checks.** First, read the tree and list the
+   languages actually present — judge from the real files, build manifests, and
+   layout, **not** a fixed extension→language table (that rots and misfires,
+   which is exactly the detection error a mechanism would introduce). For each
+   language name its conventional check (build/test/lint/SAST) and whether it is
+   wired. **Report every present language with no wired check as an explicit
+   GAP:** the built-in check finds no toolchain, `exit 2` (skips), and the gate
+   stays green — an unwired language is a silent coverage hole, not a pass.
+   Ignore vendored/generated/third-party trees when deciding what the project
+   itself owns. Then add the project checks in the repo's own `leitwerk/checks/`
    (one `<name>.sh` per check; repo-local overrides the built-in per check, so
-   never edit the installed `core/checks/`). Wire them to the project's actual
-   toolchain (build, test, lint, SAST). A check that has nothing to run must
-   `exit 2` (skip), never fake a pass.
+   never edit the installed `core/checks/`), wired to the project's actual
+   toolchain. A check that has nothing to run must `exit 2` (skip), never fake a
+   pass — so the coverage GAP is what keeps an honest skip visible, not silent.
 4. **Characterize existing behaviour.** For brownfield code with no tests around
    a risky area, add characterization tests so the gate has an oracle before any
    change is made.
 5. **Draft the constitution.** Fill invariants, DoD, and the role ensemble this
    project needs. Keep it to non-obvious facts. The human reviews and owns it.
 6. **Prove it.** Run `leitwerk verify --tier T2` and confirm it executes end to
-   end. Report what is enforced vs. still skipped.
+   end. Report what is enforced vs. still skipped — and call out any language
+   present in the repo whose checks only skip (unwired), so a green-but-empty
+   gate is never read as coverage.
 
 **A pre-existing `specs/` (or other docs) in another structure.** `leitwerk/` is
 a *namespaced, additive* layer: `leitwerk init` never migrates or touches an
@@ -54,5 +65,6 @@ and use `leitwerk/specs/` for new work; if the human wants an existing spec unde
 the gate, convert *that one* to the Leitwerk shape (Problem / Behaviour / Anchors)
 when a change next touches its area — strangler-fig, never big-bang.
 
-Hand back a short summary: what is now gated, what tiers map where, and which
-checks are still stubs needing real tooling.
+Hand back a short summary: what is now gated, what tiers map where, which checks
+are still stubs needing real tooling, and which present languages have no check
+wired at all (silent-skip coverage gaps).

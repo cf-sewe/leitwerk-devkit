@@ -18,6 +18,14 @@ allowed-tools: "Read Grep Glob Bash Task"
 3. **Spec fidelity** — read the spec and the plan, and confirm the behaviour
    the spec promises is what the code does. Run `leitwerk drift` and reconcile anything it surfaces
    (or escalate the reconciliation decision to a human).
+   **Coverage fidelity** — check whether the change adds or touches a language
+   whose conventional check is unwired: the built-in check finds no toolchain,
+   skips (`exit 2`), and the gate stays green — so the new code is verified by
+   nothing. Flag any such language as a coverage GAP (advisory — do not fail the
+   gate on it; judge from the files, not a fixed extension table). On a **T2**
+   change, widen this to a whole-repo survey (the onboarding coverage step), not
+   just the diff, so a language that has been present but never wired is caught
+   rather than sitting dormant behind a green gate.
 4. **Run the review at the right weight for the tier:**
    - **T2 (or any large/multi-file change):** run the adversarial panel over the
      role subagents (`test-engineer`, `security-reviewer`, `architect`),
@@ -35,9 +43,9 @@ allowed-tools: "Read Grep Glob Bash Task"
    - **User-visible surface:** report what a human should eyeball (the one review
      a human still owns).
 5. Summarize for the human reviewer: tier, gate result, roles run and verdicts,
-   any drift surfaced, plan deviations (the `[~]` status lines and anything
-   implemented that departs from the plan), and what specifically needs human
-   eyes. Provenance-tag claims as CONFIRMED (checked) vs INFERRED (reasoned)
+   any drift surfaced, any coverage gaps (a language present with no wired
+   check), plan deviations (the `[~]` status lines and anything implemented that
+   departs from the plan), and what specifically needs human eyes. Provenance-tag claims as CONFIRMED (checked) vs INFERRED (reasoned)
    vs GAP (unverified). Also list which decisions were escalated to the human
    and whether their answer diverged from the recommendation — a question
    class that never diverges is a pruning candidate: retire it to

@@ -40,6 +40,11 @@ the code; the gate keeps it honest.
    expect to touch) and state the worst case if it ships wrong.
 8. **Acceptance checks** — the concrete oracles (tests/properties/contracts) that
    will prove correctness. These become part of `leitwerk verify` for this area.
+   If the change introduces work in a language whose conventional check is not
+   yet wired (the built-in check finds no toolchain, skips at `exit 2`, and the
+   gate stays green over unverified code), wiring that check is itself an
+   acceptance item — name it here so the plan carries it as a step, rather than
+   the silent-skip coverage gap surfacing only at review.
 9. **Anchors** (where the spec governs specific code) — list it under
    `## Anchors` as `` `path` `` or `` `path#symbol` `` so `drift` surfaces
    spec↔code divergence (a renamed symbol or moved code goes red).

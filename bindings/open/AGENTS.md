@@ -40,7 +40,14 @@ a prediction; the CI run is the record. Do not merge on a red gate.
    its `## Anchors` section (`path` / `path#symbol`); the `drift` check goes red
    when an anchor stops resolving, or (given a diff base) when anchored code
    changed while its spec did not. If code and spec disagree and you can't tell
-   which is right, stop and flag it for a human.
+   which is right, stop and flag it for a human. **Coverage fidelity:** also
+   check whether the change adds or touches a language whose conventional check
+   is unwired — the built-in check finds no toolchain, skips (`exit 2`), and the
+   gate stays green, so the new code is verified by nothing. Flag any such
+   language as a coverage GAP (advisory — judge from the files, not a fixed
+   extension table); on a **T2** change widen this to a whole-repo survey, so a
+   language present but never wired is caught rather than sitting dormant behind
+   a green gate.
 6. **Escalate decisions, not questions.** Ask the human only for intent, scope,
    and priorities; for anything that would weaken a guarantee (thresholds,
    checks, tiers); or to accept irreversible risk (T2 sign-off). Everything
