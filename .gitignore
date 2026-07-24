@@ -6,3 +6,9 @@ core/node_modules/
 # The gate binary is a build artifact (platform-specific); build it with
 # `make -C core build`. CI builds it before running the gate.
 core/bin/leitwerk
+
+# Local, uncommitted working documents — drafts, evidence, one-off analyses.
+# A stable home in-tree, but never checked in (git does not track it). Durable,
+# adopter-facing docs go under docs/ (published) or leitwerk/ (governance);
+# truly ephemeral, per-session scratch belongs in the session scratchpad.
+local/

@@ -40,3 +40,6 @@ Use the skills: `leitwerk-onboard`, `leitwerk-spec`, `leitwerk-plan`,
   The binary is gitignored — on a fresh clone run `mise trust && mise run build` once.
 - `bindings/claude/` — the Claude Code plugin. `bindings/open/` — AGENTS.md + CI.
 - `leitwerk/` — this repo's own governance, specs, and repo-local checks.
+- `docs/` — the published GitHub Pages site (not a scratch area).
+- `local/` — gitignored working docs (drafts, evidence); never committed.
+  Ephemeral, per-session scratch → the session scratchpad.
