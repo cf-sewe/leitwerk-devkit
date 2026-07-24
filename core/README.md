@@ -42,18 +42,18 @@ builds offline and reproducibly.
 ## Building
 
 The toolchain is pinned with [mise](https://mise.jdx.dev) (`mise.toml` at the repo
-root: Go + Node LTS). From `core/`:
+root: Go + Node LTS), which also defines the build tasks. From the repo root
+(after `mise trust` on a fresh clone):
 
 ```
-make build      # -> bin/leitwerk (static; CGO disabled)
-make test       # unit + integration tests
-make install    # `go install` into GOBIN
-make clean
+mise run build      # -> core/bin/leitwerk (static; CGO disabled)
+mise run test       # unit + integration tests
+mise run install    # `go install` into GOBIN
+mise run clean
 ```
 
-`make` prefers `mise exec -- go` (the pinned toolchain) whenever mise is
-installed and falls back to a bare `go` otherwise (CI's setup-go); override with
-`make GO=…`.
+The tasks run under mise, so `go` is always the pinned toolchain (`mise.toml`);
+CI installs it with `jdx/mise-action`. A fresh clone needs `mise trust` once.
 
 ## Distribution
 
@@ -63,13 +63,15 @@ binary (`assets.go`), so a copy of `bin/leitwerk` alone is self-contained: it ca
 repo layout. On-disk siblings (`checks/`, `templates/`, `leitwerk.tiers`) win when
 present, so a full checkout or a release tarball uses the on-disk copies.
 
-Ways to make the gate resolvable for adopters and CI (see roadmap M2.1/M2.3):
+Ways to make the gate resolvable for adopters and CI:
 
 - **`go install`** — `go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest`
-  installs a single `leitwerk` binary into `GOBIN`. (Path is provisional until the
-  repo is published; no registry account is required.)
+  installs a single `leitwerk` binary into `GOBIN` (needs a Go toolchain; no
+  registry account required). It resolves the `core/vX.Y.Z` release tags, and the
+  installed binary reports its version from the module build info.
 - **Prebuilt binary** — download the static binary for your platform from a release
-  and put it on `PATH`. Cross-compiles are `GOOS=… GOARCH=… make build`.
+  and put it on `PATH`. Cross-compiles from source are `GOOS=… GOARCH=… go build`
+  (the release workflow builds the full matrix).
 - **`LEITWERK_HOME`** — for a full checkout, set `LEITWERK_HOME=/path/to/…/core`
   and put `$LEITWERK_HOME/bin` on `PATH`. The Claude plugin launcher resolves the
   core CLI this way (a marketplace install copies only the plugin, not `core/`).

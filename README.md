@@ -52,7 +52,7 @@ doubles as a worked reference for what an adopted repo looks like.
 Run the gate against the bundled example:
 
 ```bash
-make -C core build            # build the gate binary (Go toolchain pinned in mise.toml)
+mise run build                # build the gate binary (Go toolchain pinned in mise.toml)
 export PATH="$PWD/core/bin:$PATH"
 cd examples/reference-app
 leitwerk verify --tier T0     # -> gate: PASS
@@ -68,10 +68,12 @@ tooling sits on top and is optional. Full phased guide: [`docs/adoption.md`](doc
 ```bash
 # A · build from a checkout (Go toolchain pinned in mise.toml)
 git clone https://github.com/cf-sewe/leitwerk-devkit && cd leitwerk-devkit
-make -C core build
+mise run build
 export LEITWERK_HOME="$PWD/core"; export PATH="$LEITWERK_HOME/bin:$PATH"
-# B · or install one self-contained binary (carries checks/templates via embed):
-go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest   # path provisional until published
+# B · or install one self-contained binary (carries checks/templates via embed; needs Go):
+go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest
+# C · or download a prebuilt static binary from a release (no Go toolchain):
+#     fetch leitwerk_<os>_<arch> + checksums.txt from the latest release, verify, chmod +x, put on PATH
 
 cd /path/to/your/repo
 leitwerk init      # scaffolds leitwerk/{constitution.md,tiers.conf}, CLAUDE.md, .claude/{rules,workflows}/
@@ -105,7 +107,7 @@ step 1 is what enforces the bar.
 
 | Piece | Delivered by | Auto-active in a session? |
 |---|---|---|
-| The gate (`leitwerk verify`) | core CLI (`make build` / `go install` / `LEITWERK_HOME`) | it *is* the guarantee |
+| The gate (`leitwerk verify`) | core CLI (`mise run build` / `go install` / `LEITWERK_HOME`) | it *is* the guarantee |
 | Governance: constitution, `tiers.conf` | `leitwerk init` | — (human-owned) |
 | `CLAUDE.md`, `.claude/rules/` | `leitwerk init` | yes — Claude reads them |
 | Phase skills, role agents | Claude plugin | on enable |

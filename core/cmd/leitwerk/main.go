@@ -13,13 +13,35 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	assets "github.com/cf-sewe/leitwerk-devkit/core"
 	"github.com/cf-sewe/leitwerk-devkit/core/internal/gate"
 )
 
-const version = "0.1.0"
+// version is the release identifier printed by `leitwerk version` and used as
+// the cache namespace (see cacheDir). It is a var, not a const, so a release
+// build can inject the tag with `-ldflags "-X main.version=vX.Y.Z"`
+// (release-please.yml / `VERSION=… mise run build`). A plain build keeps the
+// `dev` sentinel: a non-release build never claims a release tag.
+var version = "dev"
+
+// resolveVersion returns the version to report. Precedence: an ldflags-injected
+// value (release binaries, Path B) wins; otherwise, for a `go install`-obtained
+// binary (Path A) Go records the module version in the build info, so use that;
+// a plain local build has neither and reports the `dev` sentinel.
+func resolveVersion() string {
+	if version != "dev" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		if v := bi.Main.Version; v != "" && v != "(devel)" {
+			return v
+		}
+	}
+	return version
+}
 
 const helpText = `leitwerk — the tool-agnostic gate.
 
@@ -87,7 +109,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return cmdInit(dir, resolveSelf(), stdout, stderr)
 	case "version", "--version", "-v":
-		fmt.Fprintf(stdout, "leitwerk %s\n", version)
+		fmt.Fprintf(stdout, "leitwerk %s\n", resolveVersion())
 		return 0
 	case "", "help", "--help", "-h":
 		fmt.Fprint(stdout, helpText)
@@ -356,7 +378,7 @@ func cacheDir() string {
 	if err != nil || base == "" {
 		base = os.TempDir()
 	}
-	return filepath.Join(base, "leitwerk", version)
+	return filepath.Join(base, "leitwerk", resolveVersion())
 }
 
 // resolveSelf returns the install root: the parent of the directory holding the

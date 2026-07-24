@@ -1,0 +1,33 @@
+# <type>(<scope>): <summary>   (imperative, ≤50 chars)
+#
+# Body (wrap at 72): what changed and why; note breaking changes / migration.
+# Link the spec or issue.
+#
+# Examples:
+#   feat(core): derive the tier from the diff with --auto
+#   fix(checks): stop lifecycle reddening a fresh draft
+#   docs(roadmap): bounded slug-keyed worklist
+#   ci: pin release-please to v5
+#
+# Types (feat/fix change the version; the rest do not):
+#   feat     - new behaviour or capability          (minor bump)
+#   fix      - bug fix                               (patch bump)
+#   docs     - documentation only
+#   chore    - maintenance, dependencies, tooling
+#   refactor - restructuring, no behaviour change
+#   test     - tests only
+#   ci       - CI / workflows
+#   build    - build system / toolchain
+#   perf     - performance
+#   revert   - revert a prior commit
+#
+# Scopes (optional; one of the three top-level areas):
+#   core        - the gate: binary, Go packages, and shipped checks (core/)
+#   bindings    - the Claude plugin and the open-code binding (bindings/)
+#   governance  - this repo's own governance, roadmap, and specs (leitwerk/)
+#
+# Breaking change: add ! after type/scope (e.g. feat(core)!:) or a
+# "BREAKING CHANGE:" footer. Pre-1.0 this bumps the minor, not the major.
+#
+# Because PRs are squash-merged, the PR title must also be a valid Conventional
+# Commit (the semantic-pr check enforces it).

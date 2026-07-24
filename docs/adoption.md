@@ -5,10 +5,10 @@ Phase 0 → 3 rollout.
 
 ## Phase 0 — the gate first (do this before anything else)
 1. Make the CLI resolvable. The gate is a single static Go binary — either build
-   it from a checkout (`make -C core build`, then set
+   it from a checkout (`mise run build`, then set
    `LEITWERK_HOME=/path/to/leitwerk-devkit/core` and put `$LEITWERK_HOME/bin` on
    PATH), `go install github.com/cf-sewe/leitwerk-devkit/core/cmd/leitwerk@latest`, or
-   drop a prebuilt release binary on PATH. The binary embeds its checks/templates,
+   drop a prebuilt release binary on PATH (after verifying its checksum). The binary embeds its checks/templates,
    so it does not depend on the repo layout.
 2. `leitwerk init` in the target repo → `leitwerk/{constitution.md,tiers.conf}`
    plus the Claude steering files `CLAUDE.md`, `.claude/rules/tier-discipline.md`,

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -250,9 +251,36 @@ func TestIntegrationVerifyBadOption(t *testing.T) {
 }
 
 func TestIntegrationVersion(t *testing.T) {
+	// The line format is a fixed contract: one line `leitwerk <version>`, exit 0.
+	// The version is metadata, not a pinned release literal — assert the shape,
+	// not a hard-coded number (which would drift from the release tag).
 	code, out, _ := runBin(t, installBin, t.TempDir(), "version")
-	if code != 0 || strings.TrimSpace(out) != "leitwerk 0.1.0" {
-		t.Errorf("version = %q (exit %d)", strings.TrimSpace(out), code)
+	if code != 0 {
+		t.Fatalf("version exit = %d, want 0", code)
+	}
+	line := strings.TrimRight(out, "\n")
+	if strings.Contains(line, "\n") || !regexp.MustCompile(`^leitwerk \S+$`).MatchString(line) {
+		t.Errorf("version = %q, want one line matching `^leitwerk \\S+$`", line)
+	}
+
+	// installBin is built by setup() with a plain `go build` (no injection), so
+	// it must report the `dev` sentinel — a non-release build never claims a tag.
+	if line != "leitwerk dev" {
+		t.Errorf("default build version = %q, want %q (no ldflags injection)", line, "leitwerk dev")
+	}
+
+	// Injection round-trip: a binary built with -ldflags "-X main.version=vTEST"
+	// reports exactly `leitwerk vTEST`. This is the release seam the GoReleaser-free
+	// release-please.yml relies on; it works only because `version` is a var, not a const.
+	injected := filepath.Join(t.TempDir(), "leitwerk-injected")
+	build := exec.Command("go", "build", "-ldflags", "-X main.version=vTEST", "-o", injected, ".")
+	build.Dir = filepath.Join(coreDir, "cmd", "leitwerk")
+	build.Env = append(os.Environ(), "CGO_ENABLED=0")
+	if b, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build with ldflags injection: %v\n%s", err, b)
+	}
+	if code, out, _ := runBin(t, injected, t.TempDir(), "version"); code != 0 || strings.TrimSpace(out) != "leitwerk vTEST" {
+		t.Errorf("injected version = %q (exit %d), want %q", strings.TrimSpace(out), code, "leitwerk vTEST")
 	}
 }
 

@@ -8,6 +8,43 @@
 # cleanly, so the gate stays green without it; pinning it just lets those checks
 # run at full coverage. Pin here so a fresh checkout and CI resolve the same
 # toolchain without asdf.
+[settings]
+# Record resolved tool versions + checksums in mise.lock (committed) for
+# reproducible installs, and refuse tool releases newer than 14 days as a
+# supply-chain delay (matches the cplace-ops-cloud reference).
+lockfile = true
+minimum_release_age = "14d"
+
 [tools]
 go = "1.26.5"
 node = "24.18.0"
+
+# Build tasks for the gate (core/). Run with `mise run <task>`. The gate is a
+# single static Go binary; the version is injected via ldflags, defaulting to the
+# `dev` sentinel — a release build overrides it (release-please.yml / VERSION=…):
+#   mise run build                 -> core/bin/leitwerk, reports `leitwerk dev`
+#   VERSION=v0.1.0 mise run build  -> reports `leitwerk v0.1.0`
+[tasks.build]
+description = "Build the gate binary (static, CGO disabled)"
+dir = "{{ config_root }}/core"
+run = 'CGO_ENABLED=0 go build -ldflags "-X main.version=${VERSION:-dev}" -o bin/leitwerk ./cmd/leitwerk'
+
+[tasks.test]
+description = "Run unit + integration tests"
+dir = "{{ config_root }}/core"
+run = "CGO_ENABLED=0 go test ./..."
+
+[tasks.vet]
+description = "go vet"
+dir = "{{ config_root }}/core"
+run = "go vet ./..."
+
+[tasks.install]
+description = "go install the binary into GOBIN"
+dir = "{{ config_root }}/core"
+run = 'CGO_ENABLED=0 go install -ldflags "-X main.version=${VERSION:-dev}" ./cmd/leitwerk'
+
+[tasks.clean]
+description = "Remove the built binary"
+dir = "{{ config_root }}/core"
+run = "rm -f bin/leitwerk"

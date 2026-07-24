@@ -71,11 +71,20 @@ authoritative check. The roles are advisory; `leitwerk verify` in CI is binding.
 - **T2** irreversible / infra / data (migrations, IaC, billing, auth) — all
   checks plus SAST, dependency policy, and an explicit rollback.
 
+## Commits and pull requests
+Commits and PR titles follow Conventional Commits. Releases are automated from
+that history by release-please, and PRs are squash-merged — so the **PR title**
+must be a valid Conventional Commit (the `semantic-pr` check enforces it). Types
+and scopes are listed in `.gitmessage` (set it as your commit template with
+`git config commit.template .gitmessage`); see `CONTRIBUTING.md` for the release
+flow.
+
 ## Constitution and human-owned files
 Project invariants and Definition of Done live in `leitwerk/constitution.md`.
-It, `leitwerk/tiers.conf`, and `leitwerk/roadmap.md` are **human-owned**: propose
-changes, do not edit them unilaterally. `leitwerk guard <path>` reports whether a
-path is human-owned (the list is `[human-owned]` in the tiers file).
+It and `leitwerk/tiers.conf` are **human-owned**: propose changes, do not edit
+them unilaterally. (The roadmap is agent-editable — a human confirms each edit.)
+`leitwerk guard <path>` reports whether a path is human-owned (the list is
+`[human-owned]` in the tiers file).
 
 Claude Code blocks these edits with a `PreToolUse` hook; open-code tools have no
 universal pre-edit hook, so enforce the same boundary with **required review** —

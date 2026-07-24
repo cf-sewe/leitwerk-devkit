@@ -129,7 +129,7 @@ before making it broadly adoptable.
     version. (This is the coupling the `architect` role owns, below.)
   - *Fallback (documented, not automated):* a platform/arch **not** in the release
     matrix has no prebuilt asset — that user builds from source (`go install
-    …@<version>` or `make -C core build`). Not a primary path; just documented so
+    …@<version>` or `mise run build`). Not a primary path; just documented so
     no one is stranded.
   - *Optional, separable (tier T2, core):* a `leitwerk selfupdate` subcommand for
     the update path — it re-runs the same download+verify in-binary and cross-

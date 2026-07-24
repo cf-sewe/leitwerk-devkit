@@ -37,6 +37,6 @@ Use the skills: `leitwerk-onboard`, `leitwerk-spec`, `leitwerk-plan`,
 
 ## Layout
 - `core/` — the tool-agnostic gate (`core/bin/leitwerk`, `core/checks/*.sh`). T2.
-  The binary is gitignored — on a fresh clone run `make -C core build` once.
+  The binary is gitignored — on a fresh clone run `mise trust && mise run build` once.
 - `bindings/claude/` — the Claude Code plugin. `bindings/open/` — AGENTS.md + CI.
 - `leitwerk/` — this repo's own governance, specs, and repo-local checks.

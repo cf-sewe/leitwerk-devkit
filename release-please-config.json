@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "91e98c570179b00654df8fb9451159c0680fe946",
+  "tag-separator": "/",
+  "packages": {
+    "core": {
+      "release-type": "go",
+      "component": "core",
+      "package-name": "core",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

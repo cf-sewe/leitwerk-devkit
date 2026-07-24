@@ -9,7 +9,7 @@ via the `selftest` check, so a regression in any scenario turns CI red.
 Run them against a built CLI:
 
 ```bash
-make -C ../../core build
+mise run build
 ./run-all.sh ../../core/bin/leitwerk
 ```
 
